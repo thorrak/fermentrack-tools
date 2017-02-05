@@ -22,7 +22,7 @@ server {
 
     location /static {
       # TODO - Get this to actually update based on the username we're installing to
-      alias /home/brewpi/brewpi-django/static_collected/;
+      alias /home/brewpi/brewpi-django/collected_static/;
       access_log off;
       expires 30s;
       log_not_found off;

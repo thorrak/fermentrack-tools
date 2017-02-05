@@ -241,8 +241,8 @@ find "$installPath" -type d -exec chmod g+rwxs {} \;||die
 ############
 echo -e "\n***** Downloading most recent BrewPi-Django codebase... *****"
 cd "$installPath"
-# Using the /thorrak/ repo instead to support esp8266
-sudo -u brewpi git clone https://github.com/thorrak/brewpi-django.git "$installPath/brewpi-django"||die
+# TODO - Flip back to https before release.
+sudo -u brewpi git clone git@github.com:thorrak/brewpi-django.git "$installPath/brewpi-django"||die
 
 
 ############
@@ -253,25 +253,16 @@ cd "$installPath"
 sudo -u brewpi virtualenv "venv"
 
 
-# TODO - Update or remove the cron & fix permissions scripts
-############
-### Fix permissions
-############
-echo -e "\n***** Running fixPermissions.sh from the script repo. *****"
-if [ -a "$installPath"/utils/fixPermissions.sh ]; then
-   bash "$installPath"/utils/fixPermissions.sh
-else
-   echo "ERROR: Could not find fixPermissions.sh!"
-fi
+# TODO - Update or remove the cron script
 
 ############
-### Install CRON job
+### Install CRON job to launch Circus
 ############
-echo -e "\n***** Running updateCron.sh from the script repo. *****"
-if [ -a "$installPath"/utils/updateCron.sh ]; then
-   bash "$installPath"/utils/updateCron.sh
+echo -e "\n***** Running updateCronCircus.sh from the script repo. *****"
+if [ -a "$installPath"/utils/updateCronCircus.sh ]; then
+   bash "$installPath"/utils/updateCronCircus.sh
 else
-   echo "ERROR: Could not find updateCron.sh!"
+   echo "ERROR: Could not find updateCronCircus.sh!"
 fi
 
 
