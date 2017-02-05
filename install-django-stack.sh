@@ -148,22 +148,24 @@ esac
 ############
 ### Now for the install!
 ############
-echo -e "\n*** This script will first ask you where to install the brewpi python scripts and the web interface"
+echo -e "\n*** All scripts associated with BrewPi & BrewPi-Django are now installed to a user's home directory"
 echo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
 
-echo -e "\nAny data in the following location will be ERASED during install!"
-read -p "Where would you like to install BrewPi? [/home/brewpi]: " installPath
-if [ -z "$installPath" ]; then
-  installPath="/home/brewpi"
+echo -e "\nAny data in the user's home directory may be ERASED during install!"
+read -p "What user would you like to install BrewPi under? [brewpi]: " brewPiUser
+if [ -z "$brewPiUser" ]; then
+  brewPiUser="brewpi"
 else
-  case "$installPath" in
+  case "$brewPiUser" in
     y | Y | yes | YES| Yes )
-        installPath="/home/brewpi";; # accept default when y/yes is answered
+        brewPiUser="brewpi";; # accept default when y/yes is answered
     * )
         ;;
   esac
 fi
-echo "Installing script in $installPath";
+installPath="/home/$brewPiUser"
+echo "Configuring under user $brewPiUser";
+echo "Configuring in directory $installPath";
 
 if [ -d "$installPath" ]; then
   if [ "$(ls -A ${installPath})" ]; then
@@ -186,53 +188,27 @@ else
   fi
 fi
 
-echo "Searching for default web install location..."
-webPath=`grep DocumentRoot /etc/apache2/sites-enabled/000-default* |xargs |cut -d " " -f2`
-echo "Found $webPath"
-
-
-echo -e "\nAny data in the following location will be ERASED during install!"
-read -p "Where would you like to copy the BrewPi web files to? [$webPath]: " webPathInput
-
-if [ "$webPathInput" ]; then
-    webPath=${webPathInput}
-fi
-
-echo "Installing web interface in $webPath";
-
-if [ -d "$webPath" ]; then
-  if [ "$(ls -A ${webPath})" ]; then
-    read -p "Web directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
-    case "$yn" in
-        y | Y | yes | YES| Yes ) echo "Ok, we warned you!";;
-        * ) exit;;
-    esac
-  fi
-else
-  read -p "This path does not exist, would you like to create it? [Y/n] " yn
-  if [ -z "$yn" ]; then
-    yn="y"
-  fi
-  case "$yn" in
-      y | Y | yes | YES| Yes ) echo "Creating directory..."; mkdir -p "$webPath";;
-      * ) echo "Aborting..."; exit;;
-  esac
-fi
 
 ############
 ### Create/configure user accounts
 ############
 echo -e "\n***** Creating and configuring user accounts... *****"
-chown -R www-data:www-data "$webPath"||die
-if id -u brewpi >/dev/null 2>&1; then
-  echo "User 'brewpi' already exists, skipping..."
+
+if id -u $brewPiUser >/dev/null 2>&1; then
+  echo "User '$brewPiUser' already exists, skipping..."
 else
-  useradd -G www-data,dialout brewpi||die
-  echo -e "brewpi\nbrewpi\n" | passwd brewpi||die
+  useradd -G dialout $brewPiUser||die
+  # TODO - Is this the right thing to do??
+  echo -e "$brewPiUser\n$brewPiUser\n" | passwd brewpi||die
 fi
+
 # add pi user to brewpi and www-data group
-usermod -a -G www-data pi||die
-usermod -a -G brewpi pi||die
+if id -u pi >/dev/null 2>&1; then
+  usermod -a -G www-data pi||die
+  usermod -a -G brewpi pi||die
+fi
+
+
 
 echo -e "\n***** Checking install directories *****"
 
@@ -254,61 +230,24 @@ if [ "$(ls -A ${installPath})" ]; then
     find "$installPath"/ -name '.*' | xargs rm -rf||die
 fi
 
-if [ -d "$webPath" ]; then
-  echo "$webPath already exists"
-else
-  mkdir -p "$webPath"
-fi
-if [ "$(ls -A ${webPath})" ]; then
-  echo "Web directory is NOT empty, backing up to this users home dir and then deleting contents..."
-  if ! [ -a ~/brewpi-backup/ ]; then
-    mkdir -p ~/brewpi-backup
-  fi
-  if ! [ -a ~/brewpi-backup/"$dirName"/ ]; then
-    mkdir -p ~/brewpi-backup/"$dirName"
-  fi
-  cp -R "$webPath" ~/brewpi-backup/"$dirName"/||die
-  rm -rf "$webPath"/*||die
-  find "$webPath"/ -name '.*' | xargs rm -rf||die
-fi
-
-chown -R www-data:www-data "$webPath"||die
 chown -R brewpi:brewpi "$installPath"||die
 
 ############
 ### Set sticky bit! nom nom nom
 ############
 find "$installPath" -type d -exec chmod g+rwxs {} \;||die
-find "$webPath" -type d -exec chmod g+rwxs {} \;||die
 
 
 ############
 ### Clone BrewPi repositories
 ############
-echo -e "\n***** Downloading most recent BrewPi codebase... *****"
+echo -e "\n***** Downloading most recent BrewPi-Django codebase... *****"
 cd "$installPath"
 # Using the /thorrak/ repo instead to support esp8266
-sudo -u brewpi git clone https://github.com/thorrak/brewpi-script "$installPath"||die
-cd "$webPath"
-sudo -u www-data git clone https://github.com/BrewPi/brewpi-www "$webPath"||die
-
-###########
-### If non-default paths are used, update config files accordingly
-##########
-if [[ "$installPath" != "/home/brewpi" ]]; then
-    echo -e "\n***** Using non-default path for the script dir, updating config files *****"
-    echo "scriptPath = $installPath" >> "$installPath"/settings/config.cfg
-
-    echo "<?php " >> "$webPath"/config_user.php
-    echo "\$scriptPath = '$installPath';" >> "$webPath"/config_user.php
-fi
-
-if [[ "$webPath" != "/var/www" ]]; then
-    echo -e "\n***** Using non-default path for the web dir, updating config files *****"
-    echo "wwwPath = $webPath" >> "$installPath"/settings/config.cfg
-fi
+sudo -u brewpi git clone https://github.com/thorrak/brewpi-django.git "$installPath/brewpi-django"||die
 
 
+# TODO - Update or remove the cron & fix permissions scripts
 ############
 ### Fix permissions
 ############
