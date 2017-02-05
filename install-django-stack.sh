@@ -274,6 +274,32 @@ else
    echo "ERROR: Could not find updateCron.sh!"
 fi
 
+
+############
+### Create secretsettings.py file
+############
+echo -e "\n***** Running make_secretsettings.sh from the script repo. *****"
+if [ -a "$installPath"/brewpi-django/utils/make_secretsettings.sh ]; then
+   cd "$installPath"/brewpi-django/utils/
+   bash "$installPath"/brewpi-django/utils/make_secretsettings.sh
+else
+   echo "ERROR: Could not find brewpi-django/utils/make_secretsettings.sh!"
+fi
+
+
+############
+### Run the upgrade script within BrewPi-Django
+############
+echo -e "\n***** Running upgrade.sh from the script repo to finalize the install. *****"
+if [ -a "$installPath"/brewpi-django/utils/upgrade.sh ]; then
+   cd "$installPath"/brewpi-django/utils/
+   bash "$installPath"/brewpi-django/utils/upgrade.sh
+else
+   echo "ERROR: Could not find brewpi-django/utils/upgrade.sh!"
+fi
+
+
+
 ############
 ### Check for insecure SSH key
 ############
