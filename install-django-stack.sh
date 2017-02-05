@@ -314,6 +314,18 @@ if grep -q "$defaultKey" /etc/ssh/ssh_host_rsa_key.pub; then
   fi
 fi
 
+
+############
+### Set up nginx
+############
+
+echo -e "\n***** Copying nginx configuration to /etc/nginx and activating. *****"
+cp "$myPath"/nginx-configs/default-brewpi /etc/nginx/sites-available/default-brewpi
+rm /etc/nginx/sites-enabled/default
+ln -s /etc/nginx/sites-available/default-brewpi /etc/nginx/sites-enabled/default-brewpi
+service nginx restart
+
+
 echo -e "Done installing BrewPi!"
 
 echo -e "\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
