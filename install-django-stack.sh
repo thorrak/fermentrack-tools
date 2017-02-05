@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 
-
-
-
 # Copyright 2013 BrewPi
-# This file is part of BrewPi.
+# This file was originally part of BrewPi, and is now part of BrewPi/BrewPi-Django
 
 # BrewPi is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,8 +30,9 @@
 # 2. Confirm the install settings
 # 3. Add the users
 # 4. Clone the brewpi-django repo
-# 5. Run the brewpi-django upgrade script
-# 6. Copy the nginx configuration file & restart nginx
+# 5. Set up  virtualenv
+# 6. Run the brewpi-django upgrade script
+# 7. Copy the nginx configuration file & restart nginx
 
 
 ############
@@ -245,6 +243,14 @@ echo -e "\n***** Downloading most recent BrewPi-Django codebase... *****"
 cd "$installPath"
 # Using the /thorrak/ repo instead to support esp8266
 sudo -u brewpi git clone https://github.com/thorrak/brewpi-django.git "$installPath/brewpi-django"||die
+
+
+############
+### Set up virtualenv directory
+############
+echo -e "\n***** Creating virtualenv directory... *****"
+cd "$installPath"
+sudo -u brewpi virtualenv "venv"
 
 
 # TODO - Update or remove the cron & fix permissions scripts

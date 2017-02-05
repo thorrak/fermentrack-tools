@@ -1,4 +1,4 @@
-brewpi-tools
+brewpi-django-tools
 ============
 
 Various tools to setup/update/configure BrewPi
