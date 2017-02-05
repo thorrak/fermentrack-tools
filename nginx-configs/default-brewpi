@@ -20,6 +20,7 @@ server {
       proxy_pass http://127.0.0.1:8123;
     }
 
+    # static is where we store static files
     location /static {
       # TODO - Get this to actually update based on the username we're installing to
       alias /home/brewpi/brewpi-django/collected_static/;
@@ -28,11 +29,21 @@ server {
       log_not_found off;
     }
 
+    # media is where we would store uploaded files (if we ever add that feature)
     location /media {
       # TODO - Get this to actually update based on the username we're installing to
       alias /home/brewpi/brewpi-django/media/;
       access_log off;
       expires 90s;
+      log_not_found off;
+    }
+
+    # data is where we store csv files containing beer data
+    location /data {
+      # TODO - Get this to actually update based on the username we're installing to
+      alias /home/brewpi/brewpi-django/data/;
+      access_log off;
+      expires 10s;
       log_not_found off;
     }
 
