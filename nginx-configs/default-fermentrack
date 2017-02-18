@@ -1,11 +1,11 @@
 # Default server configuration
-# Defaulting default server to brewpi-django
+# Defaulting default server to Fermentrack
 server {
 	listen 80 default_server;
 	listen [::]:80 default_server;
 
     # TODO - Get this to actually update based on the username we're installing to
-	root /home/brewpi/brewpi-django;
+	root /home/brewpi/fermentrack;
 
 	server_name _;
 
@@ -23,7 +23,7 @@ server {
     # static is where we store static files
     location /static {
       # TODO - Get this to actually update based on the username we're installing to
-      alias /home/brewpi/brewpi-django/collected_static/;
+      alias /home/brewpi/fermentrack/collected_static/;
       access_log off;
       expires 30s;
       log_not_found off;
@@ -32,7 +32,7 @@ server {
     # media is where we would store uploaded files (if we ever add that feature)
     location /media {
       # TODO - Get this to actually update based on the username we're installing to
-      alias /home/brewpi/brewpi-django/media/;
+      alias /home/brewpi/fermentrack/media/;
       access_log off;
       expires 90s;
       log_not_found off;
@@ -41,7 +41,7 @@ server {
     # data is where we store csv files containing beer data
     location /data {
       # TODO - Get this to actually update based on the username we're installing to
-      alias /home/brewpi/brewpi-django/data/;
+      alias /home/brewpi/fermentrack/data/;
       access_log off;
       expires 10s;
       log_not_found off;
@@ -50,7 +50,7 @@ server {
     # alias favicon.* to static
     location ~ ^/favicon.(\w*)$ {
       # TODO - Get this to actually update based on the username we're installing to
-      alias /home/brewpi/brewpi-django/static_collected/favicon.$1;
+      alias /home/brewpi/fermentrack/static_collected/favicon.$1;
       access_log off;
       expires 90s;
       log_not_found off;

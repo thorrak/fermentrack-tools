@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Copyright 2013 BrewPi
-# This file was originally part of BrewPi, and is now part of BrewPi/BrewPi-Django
+# This file was originally part of BrewPi, and is now part of BrewPi/Fermentrack
 
 # BrewPi is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with BrewPi.  If not, see <http://www.gnu.org/licenses/>.
 
+# Fermentrack is free software, and is distributed under the terms of the MIT license.
+# A copy of the MIT license should be included with Fermentrack. If not, a copy can be
+# reviewed at <https://opensource.org/licenses/MIT>
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
 ########################
 ### This script assumes a clean Raspbian install.
 ### Freeder, v1.0, Aug 2013
@@ -25,13 +38,13 @@
 ########################
 
 
-# For brewpi-django, the process will work like this:
+# For fermentrack, the process will work like this:
 # 1. Install the system-wide packages (nginx, etc.)
 # 2. Confirm the install settings
 # 3. Add the users
-# 4. Clone the brewpi-django repo
+# 4. Clone the fermentrack repo
 # 5. Set up  virtualenv
-# 6. Run the brewpi-django upgrade script
+# 6. Run the fermentrack upgrade script
 # 7. Copy the nginx configuration file & restart nginx
 
 
@@ -146,23 +159,23 @@ esac
 ############
 ### Now for the install!
 ############
-echo -e "\n*** All scripts associated with BrewPi & BrewPi-Django are now installed to a user's home directory"
+echo -e "\n*** All scripts associated with BrewPi & Fermentrack are now installed to a user's home directory"
 echo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
 
 echo -e "\nAny data in the user's home directory may be ERASED during install!"
-read -p "What user would you like to install BrewPi under? [brewpi]: " brewPiUser
-if [ -z "$brewPiUser" ]; then
-  brewPiUser="brewpi"
+read -p "What user would you like to install BrewPi under? [brewpi]: " fermentrackUser
+if [ -z "$fermentrackUser" ]; then
+  fermentrackUser="fermentrack"
 else
-  case "$brewPiUser" in
+  case "$fermentrackUser" in
     y | Y | yes | YES| Yes )
-        brewPiUser="brewpi";; # accept default when y/yes is answered
+        fermentrackUser="fermentrack";; # accept default when y/yes is answered
     * )
         ;;
   esac
 fi
-installPath="/home/$brewPiUser"
-echo "Configuring under user $brewPiUser";
+installPath="/home/$fermentrackUser"
+echo "Configuring under user $fermentrackUser";
 echo "Configuring in directory $installPath";
 
 if [ -d "$installPath" ]; then
@@ -174,7 +187,7 @@ if [ -d "$installPath" ]; then
     esac
   fi
 else
-  if [ "$installPath" != "/home/brewpi" ]; then
+  if [ "$installPath" != "/home/fermentrack" ]; then
     read -p "This path does not exist, would you like to create it? [Y/n] " yn
     if [ -z "$yn" ]; then
       yn="y"
@@ -192,18 +205,18 @@ fi
 ############
 echo -e "\n***** Creating and configuring user accounts... *****"
 
-if id -u $brewPiUser >/dev/null 2>&1; then
-  echo "User '$brewPiUser' already exists, skipping..."
+if id -u $fermentrackUser >/dev/null 2>&1; then
+  echo "User '$fermentrackUser' already exists, skipping..."
 else
-  useradd -G dialout $brewPiUser||die
-  # TODO - Is this the right thing to do??
-  echo -e "$brewPiUser\n$brewPiUser\n" | passwd brewpi||die
+  useradd -G dialout $fermentrackUser||die
+  # Disable direct login for this user to prevent hijacking if password isn't changed
+  passwd -d $fermentrackUser||die
 fi
 
-# add pi user to brewpi and www-data group
+# add pi user to fermentrack and www-data group
 if id -u pi >/dev/null 2>&1; then
   usermod -a -G www-data pi||die
-  usermod -a -G brewpi pi||die
+  usermod -a -G fermentrack pi||die
 fi
 
 
@@ -219,16 +232,16 @@ fi
 dirName=$(date +%F-%k:%M:%S)
 if [ "$(ls -A ${installPath})" ]; then
   echo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
-    if ! [ -a ~/brewpi-backup/ ]; then
-      mkdir -p ~/brewpi-backup
+    if ! [ -a ~/fermentrack-backup/ ]; then
+      mkdir -p ~/fermentrack-backup
     fi
-    mkdir -p ~/brewpi-backup/"$dirName"
-    cp -R "$installPath" ~/brewpi-backup/"$dirName"/||die
+    mkdir -p ~/fermentrack-backup/"$dirName"
+    cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
     rm -rf "$installPath"/*||die
     find "$installPath"/ -name '.*' | xargs rm -rf||die
 fi
 
-chown -R brewpi:brewpi "$installPath"||die
+chown -R fermentrack:fermentrack "$installPath"||die
 
 ############
 ### Set sticky bit! nom nom nom
@@ -237,12 +250,12 @@ find "$installPath" -type d -exec chmod g+rwxs {} \;||die
 
 
 ############
-### Clone BrewPi repositories
+### Clone Fermentrack repositories
 ############
-echo -e "\n***** Downloading most recent BrewPi-Django codebase... *****"
+echo -e "\n***** Downloading most recent Fermentrack codebase... *****"
 cd "$installPath"
 # TODO - Flip back to https before release.
-sudo -u brewpi git clone git@github.com:thorrak/brewpi-django.git "$installPath/brewpi-django"||die
+sudo -u fermentrack git clone git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
 
 
 ############
@@ -250,7 +263,7 @@ sudo -u brewpi git clone git@github.com:thorrak/brewpi-django.git "$installPath/
 ############
 echo -e "\n***** Creating virtualenv directory... *****"
 cd "$installPath"
-sudo -u brewpi virtualenv "venv"
+sudo -u fermentrack virtualenv "venv"
 
 
 # TODO - Update or remove the cron script
@@ -270,23 +283,23 @@ fi
 ### Create secretsettings.py file
 ############
 echo -e "\n***** Running make_secretsettings.sh from the script repo. *****"
-if [ -a "$installPath"/brewpi-django/utils/make_secretsettings.sh ]; then
-   cd "$installPath"/brewpi-django/utils/
-   bash "$installPath"/brewpi-django/utils/make_secretsettings.sh
+if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
+   cd "$installPath"/fermentrack/utils/
+   bash "$installPath"/fermentrack/utils/make_secretsettings.sh
 else
-   echo "ERROR: Could not find brewpi-django/utils/make_secretsettings.sh!"
+   echo "ERROR: Could not find fermentrack/utils/make_secretsettings.sh!"
 fi
 
 
 ############
-### Run the upgrade script within BrewPi-Django
+### Run the upgrade script within Fermentrack
 ############
 echo -e "\n***** Running upgrade.sh from the script repo to finalize the install. *****"
-if [ -a "$installPath"/brewpi-django/utils/upgrade.sh ]; then
-   cd "$installPath"/brewpi-django/utils/
-   bash "$installPath"/brewpi-django/utils/upgrade.sh
+if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
+   cd "$installPath"/fermentrack/utils/
+   bash "$installPath"/fermentrack/utils/upgrade.sh
 else
-   echo "ERROR: Could not find brewpi-django/utils/upgrade.sh!"
+   echo "ERROR: Could not find fermentrack/utils/upgrade.sh!"
 fi
 
 
@@ -311,18 +324,18 @@ fi
 ############
 
 echo -e "\n***** Copying nginx configuration to /etc/nginx and activating. *****"
-cp "$myPath"/nginx-configs/default-brewpi /etc/nginx/sites-available/default-brewpi
+cp "$myPath"/nginx-configs/default-fermentrack /etc/nginx/sites-available/default-fermentrack
 rm /etc/nginx/sites-enabled/default
-ln -s /etc/nginx/sites-available/default-brewpi /etc/nginx/sites-enabled/default-brewpi
+ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
 service nginx restart
 
 
-echo -e "Done installing BrewPi!"
+echo -e "Done installing Fermentrack!"
 
 echo -e "\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 echo -e "Review the log above for any errors, otherwise, your initial environment install is complete!"
-echo -e "\nYou are currently using the password 'brewpi' for the brewpi user. If you wish to change this, type 'sudo passwd brewpi' now, and follow the prompt"
-echo -e "\nTo view your BrewPi web interface, enter http://`/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}'` into your web browser"
+echo -e "\nThe fermentrack user has been set up with no password. Use `sudo su ${fermentrackUser}` from this user to access the fermentrack user"
+echo -e "\nTo view Fermentrack, enter http://`/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}'` into your web browser"
 echo -e "\nHappy Brewing!"
 
 

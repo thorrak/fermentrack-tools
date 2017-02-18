@@ -18,6 +18,8 @@
 ### Geo Van O, v0.9, Sep 2013
 ### Elco Jacobs, sept 2013
 
+# TODO - Remove this script from fermentrack tools
+
 import subprocess
 from time import localtime, strftime
 import sys
