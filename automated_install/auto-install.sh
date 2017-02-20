@@ -21,7 +21,7 @@ package_name="Fermentrack"
 install_curl_url="install.fermentrack.com"
 install_curl_command="curl -L install.fermentrack.com | sudo bash"
 tools_name="fermentrack-tools"
-tools_repo_url="git@github.com:thorrak/fermentrack.git"
+tools_repo_url="https://github.com/thorrak/fermentrack-tools.git"
 
 # Set scriptPath to the current script path
 unset CDPATH
@@ -30,7 +30,7 @@ scriptPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
 
 #######
-#### Error capturing functions
+#### Error capturing functions - Originally from http://mywiki.wooledge.org/BashFAQ/101
 #######
 warn() {
   local fmt="$1"
@@ -121,6 +121,7 @@ getAptPackages() {
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
     echo "::: apt is updated - installing git-core, build-essential, python-dev, and python-virtualenv."
+    echo "::: (This may take a few minutes during which everything will be silent)"
     sudo apt-get install -y git-core build-essential python-dev python-virtualenv &> /dev/null || die
     echo ":: All packages installed successfully."
 }

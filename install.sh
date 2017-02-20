@@ -209,7 +209,7 @@ echo -e "\n***** Creating and configuring user accounts... *****"
 if id -u $fermentrackUser >/dev/null 2>&1; then
   echo "User '$fermentrackUser' already exists, skipping..."
 else
-  useradd -G dialout $fermentrackUser||die
+  useradd -m -G dialout $fermentrackUser||die
   # Disable direct login for this user to prevent hijacking if password isn't changed
   passwd -d $fermentrackUser||die
 fi
