@@ -255,7 +255,7 @@ find "$installPath" -type d -exec chmod g+rwxs {} \;||die
 echo -e "\n***** Downloading most recent Fermentrack codebase... *****"
 cd "$installPath"
 # TODO - Flip back to https before release.
-sudo -u $fermentrackUser git clone -b installfixes git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
+sudo -u $fermentrackUser git clone git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
 
 
 ############
