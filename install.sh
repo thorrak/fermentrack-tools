@@ -333,12 +333,16 @@ fi
 
 
 MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
-echo -e "Done installing Fermentrack!"
-echo -e "\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-echo -e "Review the log above for any errors, otherwise, your initial environment install is complete!"
-echo -e "\nThe fermentrack user has been set up with no password. Use `sudo su ${fermentrackUser}` from this user to access the fermentrack user"
-echo -e "\nTo view Fermentrack, enter http://${MYIP} into your web browser"
-echo -e "\nHappy Brewing!"
+echo "Done installing Fermentrack!"
+echo ""
+echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
+echo ""
+echo "The fermentrack user has been set up with no password. Use 'sudo su ${fermentrackUser}' from this user to access the fermentrack user"
+echo ""
+echo "To view Fermentrack, enter http://${MYIP} into your web browser"
+echo ""
+echo "Happy Brewing!"
 
 
 
