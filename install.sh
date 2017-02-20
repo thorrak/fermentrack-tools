@@ -121,6 +121,7 @@ sudo apt-get install -y git-core build-essential python-dev python-pip pastebini
 
 echo -e "\n***** Installing/updating required python packages via pip... *****\n"
 # TODO - Change the following line to utilize requirements.txt files
+# TODO - Should this be moved into the virtuelenv instead?
 sudo pip install pyserial psutil simplejson configobj gitpython zeroconf --upgrade
 echo -e "\n***** Done processing non-pip BrewPi dependencies *****\n"
 
@@ -163,7 +164,7 @@ echo -e "\n*** All scripts associated with BrewPi & Fermentrack are now installe
 echo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
 
 echo -e "\nAny data in the user's home directory may be ERASED during install!"
-read -p "What user would you like to install BrewPi under? [brewpi]: " fermentrackUser
+read -p "What user would you like to install BrewPi under? [fermentrack]: " fermentrackUser
 if [ -z "$fermentrackUser" ]; then
   fermentrackUser="fermentrack"
 else
@@ -215,17 +216,16 @@ fi
 
 # add pi user to fermentrack and www-data group
 if id -u pi >/dev/null 2>&1; then
-  usermod -a -G www-data pi||die
-  usermod -a -G fermentrack pi||die
+  usermod -a -G www-data $fermentrackUser||die
+  # TODO: Check that the group fermentrack are created, or needed.
+  # usermod -a -G fermentrack $fermentrackUser||die
 fi
-
 
 
 echo -e "\n***** Checking install directories *****"
 
+# if our installpath/userdir does not exist (it should!)
 if [ -d "$installPath" ]; then
-  echo "$installPath already exists"
-else
   mkdir -p "$installPath"
 fi
 
@@ -241,7 +241,7 @@ if [ "$(ls -A ${installPath})" ]; then
     find "$installPath"/ -name '.*' | xargs rm -rf||die
 fi
 
-chown -R fermentrack:fermentrack "$installPath"||die
+chown -R $fermentrackUser:$fermentrackUser "$installPath"||die
 
 ############
 ### Set sticky bit! nom nom nom
@@ -255,7 +255,7 @@ find "$installPath" -type d -exec chmod g+rwxs {} \;||die
 echo -e "\n***** Downloading most recent Fermentrack codebase... *****"
 cd "$installPath"
 # TODO - Flip back to https before release.
-sudo -u fermentrack git clone git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
+sudo -u $fermentrackUser git clone -b installfixes git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
 
 
 ############
@@ -263,20 +263,7 @@ sudo -u fermentrack git clone git@github.com:thorrak/fermentrack.git "$installPa
 ############
 echo -e "\n***** Creating virtualenv directory... *****"
 cd "$installPath"
-sudo -u fermentrack virtualenv "venv"
-
-
-# TODO - Update or remove the cron script
-
-############
-### Install CRON job to launch Circus
-############
-echo -e "\n***** Running updateCronCircus.sh from the script repo. *****"
-if [ -a "$installPath"/utils/updateCronCircus.sh ]; then
-   bash "$installPath"/utils/updateCronCircus.sh
-else
-   echo "ERROR: Could not find updateCronCircus.sh!"
-fi
+sudo -u $fermentrackUser virtualenv "venv"
 
 
 ############
@@ -285,7 +272,7 @@ fi
 echo -e "\n***** Running make_secretsettings.sh from the script repo. *****"
 if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
    cd "$installPath"/fermentrack/utils/
-   bash "$installPath"/fermentrack/utils/make_secretsettings.sh
+   sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/make_secretsettings.sh
 else
    echo "ERROR: Could not find fermentrack/utils/make_secretsettings.sh!"
 fi
@@ -297,11 +284,10 @@ fi
 echo -e "\n***** Running upgrade.sh from the script repo to finalize the install. *****"
 if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
    cd "$installPath"/fermentrack/utils/
-   bash "$installPath"/fermentrack/utils/upgrade.sh
+   sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh
 else
    echo "ERROR: Could not find fermentrack/utils/upgrade.sh!"
 fi
-
 
 
 ############
@@ -322,20 +308,33 @@ fi
 ############
 ### Set up nginx
 ############
-
 echo -e "\n***** Copying nginx configuration to /etc/nginx and activating. *****"
 cp "$myPath"/nginx-configs/default-fermentrack /etc/nginx/sites-available/default-fermentrack
-rm /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/default
 ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
 service nginx restart
 
 
-echo -e "Done installing Fermentrack!"
+############
+### Install CRON job to launch Circus
+############
+echo -e "\n***** Running updateCronCircus.sh from the script repo. *****"
+if [ -f "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh ]; then
+   sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh add2cron
+   echo -e "\n***** Starting circus process monitor *****"
+   sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh start
+else
+   echo "ERROR: Could not find updateCronCircus.sh!"
+fi
 
+
+
+MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+echo -e "Done installing Fermentrack!"
 echo -e "\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 echo -e "Review the log above for any errors, otherwise, your initial environment install is complete!"
 echo -e "\nThe fermentrack user has been set up with no password. Use `sudo su ${fermentrackUser}` from this user to access the fermentrack user"
-echo -e "\nTo view Fermentrack, enter http://`/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}'` into your web browser"
+echo -e "\nTo view Fermentrack, enter http://${MYIP} into your web browser"
 echo -e "\nHappy Brewing!"
 
 
