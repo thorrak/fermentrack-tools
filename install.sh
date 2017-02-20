@@ -48,6 +48,9 @@
 # 7. Copy the nginx configuration file & restart nginx
 
 
+github_repo="https://github.com/thorrak/fermentrack.git"
+#github_repo="git@github.com:thorrak/fermentrack.git"
+
 ############
 ### Init
 ###########
@@ -117,13 +120,13 @@ if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
     sudo apt-get update||die
 fi
 # Installing the nginx stack along with everything we need for circus, etc.
-sudo apt-get install -y git-core build-essential python-dev python-pip pastebinit nginx libzmq-dev libevent-dev python-virtualenv || die
+sudo apt-get install -y git-core build-essential python-dev python-pip nginx libzmq-dev libevent-dev python-virtualenv || die
 
-echo -e "\n***** Installing/updating required python packages via pip... *****\n"
-# TODO - Change the following line to utilize requirements.txt files
-# TODO - Should this be moved into the virtuelenv instead?
-sudo pip install pyserial psutil simplejson configobj gitpython zeroconf --upgrade
-echo -e "\n***** Done processing non-pip BrewPi dependencies *****\n"
+# Everything is now in the virtualenv, and under Fermentrack we no longer install the firmware directly through the
+# command line. We no longer need anything python installed here - the Fermentrack requirements.txt will handle it.
+#echo -e "\n***** Installing/updating required python packages via pip... *****\n"
+#sudo pip install pyserial psutil simplejson configobj gitpython zeroconf --upgrade
+#echo -e "\n***** Done processing non-pip BrewPi dependencies *****\n"
 
 
 ############
@@ -255,7 +258,7 @@ find "$installPath" -type d -exec chmod g+rwxs {} \;||die
 echo -e "\n***** Downloading most recent Fermentrack codebase... *****"
 cd "$installPath"
 # TODO - Flip back to https before release.
-sudo -u $fermentrackUser git clone git@github.com:thorrak/fermentrack.git "$installPath/fermentrack"||die
+sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
 
 
 ############

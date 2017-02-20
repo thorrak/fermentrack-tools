@@ -13,15 +13,23 @@ Various tools to setup/update/configure BrewPi/Fermentrack
 
 ##Automated Fermentrack Installation Instructions
 
+Want to quickly install Fermentrack onto your Raspberry Pi? Installation can now be completed with one easy command:
+
 1. Log into your Raspberry Pi via SSH (or bring up the terminal)
 2. Run `curl -L install.fermentrack.com | sudo bash`
 3. Done!
 
 ##Manual Fermentrack Installation Instructions
 
+Prefer to install everything manually? No problem. Just run the following and you'll be up and running quickly:
+
 1. Log into your Raspberry Pi via SSH (or bring up the terminal)
-2. Update everything from 
-3. Done!
+2. Run `sudo apt-get update` and 
+3. Run `sudo apt-get install -y git-core build-essential python-dev python-virtualenv`
+4. Clone the `fermentrack-tools` repo using `git clone`
+5. Run `sudo fermentrack-tools/install.sh`
+6. Follow the prompts on screen to complete installation
+7. Done!
 
 
 ##Note from Thorrak
