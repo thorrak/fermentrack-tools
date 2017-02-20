@@ -312,8 +312,11 @@ fi
 ### Set up nginx
 ############
 echo -e "\n***** Copying nginx configuration to /etc/nginx and activating. *****"
-cp "$myPath"/nginx-configs/default-fermentrack /etc/nginx/sites-available/default-fermentrack
-rm -f /etc/nginx/sites-enabled/default
+#cp "$myPath"/nginx-configs/default-fermentrack /etc/nginx/sites-available/default-fermentrack
+rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
+# Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
+sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
+rm -f /etc/nginx/sites-enabled/default &> /dev/null
 ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
 service nginx restart
 
@@ -343,6 +346,3 @@ echo ""
 echo "To view Fermentrack, enter http://${MYIP} into your web browser"
 echo ""
 echo "Happy Brewing!"
-
-
-
