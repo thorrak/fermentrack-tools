@@ -48,28 +48,42 @@
 # 7. Copy the nginx configuration file & restart nginx
 
 
-github_repo="https://github.com/thorrak/fermentrack.git"
-#github_repo="git@github.com:thorrak/fermentrack.git"
+package_name="Fermentrack"
+# if we get an argument to the script, use that for git-repo
+# default to https://github.com/thorrak/fermentrack.git
+github_repo=${1:-https://github.com/thorrak/fermentrack.git} 
+green=$(tput setaf 76)
+red=$(tput setaf 1)
+tan=$(tput setaf 3)
+reset=$(tput sgr0)
 
-############
-### Init
-###########
+printinfo() {
+  printf "::: ${green}%s${reset}\n" "$@"
+}
 
-# Make sure only root can run our script
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root: sudo ./install.sh" 1>&2
-   exit 1
-fi
 
-############
-### Functions to catch/display errors during setup
-############
+printwarn() {
+ printf "${tan}*** WARNING: %s${reset}\n" "$@"
+}
+
+
+printerror() {
+ printf "${red}*** ERROR: %s${reset}\n" "$@"
+}
+
+
+# Functions
 warn() {
   local fmt="$1"
   command shift 2>/dev/null
-  echo -e "$fmt\n" "${@}"
-  echo -e "\n*** ERROR ERROR ERROR ERROR ERROR ***\n----------------------------------\nSee above lines for error message\nSetup NOT completed\n"
+  echo "${red}*** ----------------------------------${reset}"
+  echo "${red}*** ERROR ERROR ERROR ERROR ERROR ***${reset}"
+  echo -e "${red}$fmt\n" "${@}${reset}"
+  echo "${red}*** ----------------------------------${reset}"
+  echo "${red}*** See above lines for error message${reset}"
+  echo "${red}*** Setup NOT completed${reset}"
 }
+
 
 die () {
   local st="$?"
@@ -77,79 +91,305 @@ die () {
   exit "$st"
 }
 
-############
-### Create install log file
-############
+
+verifyRunAsRoot() {
+    # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
+    # then it attempts to relaunch itself as root.
+    if [[ ${EUID} -eq 0 ]]; then
+        printinfo "This script was launched as root. Continuing installation."
+    else
+        printinfo "This script was called without root privileges. It installs and updates several packages, and the"
+        printinfo "script it calls within ${tools_name} creates user accounts and updates  system settings. To"
+        printinfo "continue this script will now attempt to use 'sudo' to relaunch itself as root. Please check"
+        printinfo "the contents of this script (as well as the install script within ${tools_name} for any concerns"
+        printinfo "with this requirement. Please be sure to access this script (and ${tools_name}) from a trusted"
+        printinfo "source."
+
+        if command -v sudo &> /dev/null; then
+            # TODO - Make this require user confirmation before continuing
+            printinfo "This script will now attempt to relaunch using sudo."
+            exec sudo bash "$@"
+            exit $?
+        else
+            printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
+            printerror "Please run this script as root and it will be automatically installed."
+            printerror "You should be able to do this by running '${install_curl_command}'"
+            exit 1
+        fi
+    fi
+    echo
+
+}
+
+
+# Check for network connection
+verifyInternetConnection() {
+  printinfo "Checking for Internet connection: "
+  ping -c 3 github.com &> /dev/null
+  if [ $? -ne 0 ]; then
+      echo
+      printerror "Could not ping github.com. Are you sure you have a working Internet connection?"
+      printerror "Installer will exit, because it needs to fetch code from github.com"
+      exit 1
+  fi
+  printinfo "Internet connection Success!"
+  echo
+}
+
+
+# Check if installer is up-to-date
+verifyInstallerVersion() {
+  printinfo "Checking whether this script is up to date..."
+  unset CDPATH
+  myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
+  printinfo ""$myPath"/update-tools-repo.sh start."
+  bash "$myPath"/update-tools-repo.sh
+  printinfo ""$myPath"/update-tools-repo.sh end."
+  if [ $? -ne 0 ]; then
+    printerror "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
+    exit 1
+  fi
+  echo
+}
+
+
+# getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
+getAptPackages() {
+    printinfo "Installing dependencies using apt-get"
+    lastUpdate=$(stat -c %Y /var/lib/apt/lists)
+    nowTime=$(date +%s)
+    if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
+        printinfo "Last 'apt-get update' was awhile back. Updating now."
+        sudo apt-get update &> /dev/null||die
+        printinfo "'apt-get update' ran successfully."
+    fi
+    # Installing the nginx stack along with everything we need for circus, etc.
+    printinfo "apt is updated - installing git-core, build-essential, python-dev, and python-virtualenv."
+    printinfo "(This may take a few minutes during which everything will be silent) ..."
+    sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev &> /dev/null || die
+    printinfo "All packages installed successfully."
+    echo
+}
+
+
+verifyFreeDiskSpace() {
+  printinfo "Verifying free disk space..."
+  local required_free_kilobytes=512000
+  local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
+
+  # - Unknown free disk space , not a integer
+  if ! [[ "${existing_free_kilobytes}" =~ ^([0-9])+$ ]]; then
+    printerror "Unknown free disk space!"
+    printerror "We were unable to determine available free disk space on this system."
+    exit 1
+  # - Insufficient free disk space
+  elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
+    printerror "Insufficient Disk Space!"
+    printerror "Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
+    printerror "You only have ${existing_free_kilobytes} KB free."
+    printerror "If this is a new install you may need to expand your disk."
+    printerror "Try running 'sudo raspi-config', and choose the 'expand file system option'"
+    printerror "After rebooting, run this installation again. (${install_curl_command})"
+    printerror "Insufficient free space, exiting..."
+    exit 1
+  fi
+  echo
+}
+
+
+verifyInstallPath() {
+  if [ -d "$installPath" ]; then
+    if [ "$(ls -A ${installPath})" ]; then
+      read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
+      case "$yn" in
+          y | Y | yes | YES| Yes ) printinfo "Ok, we warned you!";;
+          * ) exit;;
+      esac
+    fi
+  else
+    if [ "$installPath" != "/home/fermentrack" ]; then
+      read -p "This path does not exist, would you like to create it? [Y/n] " yn
+      if [ -z "$yn" ]; then
+        yn="y"
+      fi
+      case "$yn" in
+          y | Y | yes | YES| Yes ) printinfo "Creating directory..."; mkdir -p "$installPath";;
+          * ) printerror "User aborted..."; exit;;
+      esac
+    fi
+  fi
+  echo
+}
+
+
+createConfigureUser() {
+  ### Create/configure user accounts
+  printinfo "Creating and configuring user accounts."
+
+  if id -u $fermentrackUser >/dev/null 2>&1; then
+    printinfo "User '$fermentrackUser' already exists, skipping..."
+  else
+    useradd -m -G dialout $fermentrackUser||die
+    # Disable direct login for this user to prevent hijacking if password isn't changed
+    passwd -d $fermentrackUser||die
+  fi
+  # add pi user to fermentrack and www-data group
+  if id -u pi >/dev/null 2>&1; then
+    usermod -a -G www-data $fermentrackUser||die
+  fi
+  echo
+}
+
+
+backupOldInstallation() {
+  printinfo "Checking install directories"
+  dirName=$(date +%F-%k:%M:%S)
+  if [ "$(ls -A ${installPath})" ]; then
+    printinfo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
+      if [ ! -d ~/fermentrack-backup ]; then
+        mkdir -p ~/fermentrack-backup
+      fi
+      mkdir -p ~/fermentrack-backup/"$dirName"
+      cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
+      rm -rf "$installPath"/*||die
+      find "$installPath"/ -name '.*' | xargs rm -rf||die
+  fi
+  echo
+}
+
+
+fixPermissions() {
+  printinfo "Making sure everything is owned by $fermentrackUser"
+  chown -R $fermentrackUser:$fermentrackUser "$installPath"||die
+  # Set sticky bit! nom nom nom
+  find "$installPath" -type d -exec chmod g+rwxs {} \;||die
+  echo
+}
+
+
+# Clone Fermentrack repositories
+cloneRepository() {
+  printinfo "Downloading most recent $package_name codebase..."
+  cd "$installPath"
+  sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+  echo
+}
+
+
+createPythonVenv() {
+  # Set up virtualenv directory
+  printinfo "Creating virtualenv directory..."
+  cd "$installPath"
+  sudo -u $fermentrackUser virtualenv "venv"
+  echo
+}
+
+
+# Create secretsettings.py file
+makeSecretSettings() {
+  printinfo "Running make_secretsettings.sh from the script repo"
+  if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
+    cd "$installPath"/fermentrack/utils/
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/make_secretsettings.sh
+  else
+    printerror "Could not find fermentrack/utils/make_secretsettings.sh!"
+    # TODO: decide if this is a fatal error or not
+    exit 1
+  fi
+  echo
+}
+
+
+# Run the upgrade script within Fermentrack
+runFermentrackUpgrade() {
+  printinfo "Running upgrade.sh from the script repo to finalize the install."
+  if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
+    cd "$installPath"/fermentrack/utils/
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh
+  else
+    printerror "Could not find fermentrack/utils/upgrade.sh!"
+    exit 1
+  fi
+  echo
+}
+
+
+# Check for insecure SSH key
+# TODO: Check if this is still needed, newer versions of rasbian don't have this problem.
+fixInsecureSSH() {
+  defaultKey="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLNC9E7YjW0Q9btd9aUoAg++/wa06LtBMc1eGPTdu29t89+4onZk1gPGzDYMagHnuBjgBFr4BsZHtng6uCRw8fIftgWrwXxB6ozhD9TM515U9piGsA6H2zlYTlNW99UXLZVUlQzw+OzALOyqeVxhi/FAJzAI9jPLGLpLITeMv8V580g1oPZskuMbnE+oIogdY2TO9e55BWYvaXcfUFQAjF+C02Oo0BFrnkmaNU8v3qBsfQmldsI60+ZaOSnZ0Hkla3b6AnclTYeSQHx5YqiLIFp0e8A1ACfy9vH0qtqq+MchCwDckWrNxzLApOrfwdF4CSMix5RKt9AF+6HOpuI8ZX root@raspberrypi"
+
+  if grep -q "$defaultKey" /etc/ssh/ssh_host_rsa_key.pub; then
+    printinfo "Replacing default SSH keys. You will need to remove the previous key from known hosts on any clients that have previously connected to this rpi."
+    if rm -f /etc/ssh/ssh_host_* && dpkg-reconfigure openssh-server; then
+      printinfo "Default SSH keys replaced."
+      echo
+    else
+      printwarn "Unable to replace SSH key. You probably want to take the time to do this on your own."
+    fi
+  fi
+}
+
+
+# Set up nginx
+setupNginx() {
+  printinfo "Copying nginx configuration to /etc/nginx and activating."
+  rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
+  # Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
+  sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
+  rm -f /etc/nginx/sites-enabled/default &> /dev/null
+  ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
+  service nginx restart
+}
+
+
+setupCronCircus() {
+  # Install CRON job to launch Circus
+  printinfo "Running updateCronCircus.sh from the script repo"
+  if [ -f "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh ]; then
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh add2cron
+    printinfo "Starting circus process monitor."
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh start
+  else
+    # whops, something is wrong.. 
+    printerror "Could not find updateCronCircus.sh!"
+    exit 1
+  fi
+  echo
+}
+
+
+installationReport() {
+  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+  echo "Done installing Fermentrack!"
+  echo
+  echo "====================================================================================================="
+  echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
+  echo
+  echo "The fermentrack user has been set up with no password. Use 'sudo -u ${fermentrackUser} -i'"
+  echo "from this user to access the fermentrack user"
+  echo "To view Fermentrack, enter http://${MYIP} into your web browser"
+  echo
+  echo " - Fermentrack frontend    : http://${MYIP}"
+  echo " - Fermentrack user        : ${fermentrackUser}"
+  echo " - Installation path       : ${installPath/fermentrack}"
+  echo " - Fermentrack Version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
+  echo " - Install Script Version  : ${scriptversion}"
+  echo ""
+  echo "Happy Brewing!"
+  echo ""
+}
+
+
+## ------------------- Script "main" starts here -----------------------
+# Create install log file
 exec > >(tee -i install.log)
 exec 2>&1
 
-############
-### Check for network connection
-###########
-echo -e "\nChecking for Internet connection..."
-ping -c 3 github.com &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "------------------------------------"
-    echo "Could not ping github.com. Are you sure you have a working Internet connection?"
-    echo "Installer will exit, because it needs to fetch code from github.com"
-    exit 1
-fi
-echo -e "Success!\n"
-
-############
-### Check whether installer is up-to-date
-############
-echo -e "\nChecking whether this script is up to date...\n"
-unset CDPATH
-myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
-bash "$myPath"/update-tools-repo.sh
-if [ $? -ne 0 ]; then
-    echo "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
-    exit 1
-fi
-
-
-############
-### Install required packages
-############
-echo -e "\n***** Installing/updating required packages... *****\n"
-lastUpdate=$(stat -c %Y /var/lib/apt/lists)
-nowTime=$(date +%s)
-if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
-    echo "last apt-get update was over a week ago. Running apt-get update before updating dependencies"
-    sudo apt-get update||die
-fi
-# Installing the nginx stack along with everything we need for circus, etc.
-sudo apt-get install -y git-core build-essential python-dev python-pip nginx libzmq-dev libevent-dev python-virtualenv || die
-
-# Everything is now in the virtualenv, and under Fermentrack we no longer install the firmware directly through the
-# command line. We no longer need anything python installed here - the Fermentrack requirements.txt will handle it.
-#echo -e "\n***** Installing/updating required python packages via pip... *****\n"
-#sudo pip install pyserial psutil simplejson configobj gitpython zeroconf --upgrade
-#echo -e "\n***** Done processing non-pip BrewPi dependencies *****\n"
-
-
-############
-### Setup questions
-############
-
-free_percentage=$(df /home | grep -vE '^Filesystem|tmpfs|cdrom|none' | awk '{ print $5 }')
-free=$(df /home | grep -vE '^Filesystem|tmpfs|cdrom|none' | awk '{ print $4 }')
-free_readable=$(df -H /home | grep -vE '^Filesystem|tmpfs|cdrom|none' | awk '{ print $4 }')
-
-if [ "$free" -le "512000" ]; then
-    echo -e "\nDisk usage is $free_percentage, free disk space is $free_readable"
-    echo "Not enough space to continue setup. Installing BrewPi requires at least 512mb free space"
-    echo "Did you forget to expand your root partition? To do so run 'sudo raspi-config', expand your root partition and reboot"
-    exit 1
-else
-    echo -e "\nDisk usage is $free_percentage, free disk space is $free_readable. Enough to install BrewPi\n"
-fi
-
-
-echo "To accept the default answer, just press Enter."
-echo "The default is capitalized in a Yes/No question: [Y/n]"
-echo "or shown between brackets for other questions: [default]"
+printinfo "To accept the default answer, just press Enter."
+printinfo "The default is capitalized in a Yes/No question: [Y/n]"
+printinfo "or shown between brackets for other questions: [default]"
+echo
 
 date=$(date)
 read -p "The time is currently set to $date. Is this correct? [Y/n]" choice
@@ -159,14 +399,10 @@ case "$choice" in
   * )
 esac
 
-
-############
-### Now for the install!
-############
-echo -e "\n*** All scripts associated with BrewPi & Fermentrack are now installed to a user's home directory"
-echo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
-
-echo -e "\nAny data in the user's home directory may be ERASED during install!"
+printinfo "All scripts associated with BrewPi & Fermentrack are now installed to a user's home directory"
+printinfo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
+printwarn "Any data in the user's home directory may be ERASED during install!"
+echo
 read -p "What user would you like to install BrewPi under? [fermentrack]: " fermentrackUser
 if [ -z "$fermentrackUser" ]; then
   fermentrackUser="fermentrack"
@@ -178,171 +414,28 @@ else
         ;;
   esac
 fi
+
 installPath="/home/$fermentrackUser"
-echo "Configuring under user $fermentrackUser";
-echo "Configuring in directory $installPath";
+scriptversion=$(git log --oneline -n1)
+printinfo "Configuring under user $fermentrackUser"
+printinfo "Configuring in directory $installPath"
+echo
 
-if [ -d "$installPath" ]; then
-  if [ "$(ls -A ${installPath})" ]; then
-    read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
-    case "$yn" in
-        y | Y | yes | YES| Yes ) echo "Ok, we warned you!";;
-        * ) exit;;
-    esac
-  fi
-else
-  if [ "$installPath" != "/home/fermentrack" ]; then
-    read -p "This path does not exist, would you like to create it? [Y/n] " yn
-    if [ -z "$yn" ]; then
-      yn="y"
-    fi
-    case "$yn" in
-        y | Y | yes | YES| Yes ) echo "Creating directory..."; mkdir -p "$installPath";;
-        * ) echo "Aborting..."; exit;;
-    esac
-  fi
-fi
+verifyRunAsRoot
+verifyInternetConnection
+verifyInstallerVersion
+getAptPackages
+verifyFreeDiskSpace
+verifyInstallPath
+createConfigureUser
+backupOldInstallation
+fixPermissions
+cloneRepository
+createPythonVenv
+makeSecretSettings
+runFermentrackUpgrade
+fixInsecureSSH
+setupNginx
+setupCronCircus
+installationReport
 
-
-############
-### Create/configure user accounts
-############
-echo -e "\n***** Creating and configuring user accounts... *****"
-
-if id -u $fermentrackUser >/dev/null 2>&1; then
-  echo "User '$fermentrackUser' already exists, skipping..."
-else
-  useradd -m -G dialout $fermentrackUser||die
-  # Disable direct login for this user to prevent hijacking if password isn't changed
-  passwd -d $fermentrackUser||die
-fi
-
-# add pi user to fermentrack and www-data group
-if id -u pi >/dev/null 2>&1; then
-  usermod -a -G www-data $fermentrackUser||die
-  # TODO: Check that the group fermentrack are created, or needed.
-  # usermod -a -G fermentrack $fermentrackUser||die
-fi
-
-
-echo -e "\n***** Checking install directories *****"
-
-# if our installpath/userdir does not exist (it should!)
-if [ -d "$installPath" ]; then
-  mkdir -p "$installPath"
-fi
-
-dirName=$(date +%F-%k:%M:%S)
-if [ "$(ls -A ${installPath})" ]; then
-  echo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
-    if ! [ -a ~/fermentrack-backup/ ]; then
-      mkdir -p ~/fermentrack-backup
-    fi
-    mkdir -p ~/fermentrack-backup/"$dirName"
-    cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
-    rm -rf "$installPath"/*||die
-    find "$installPath"/ -name '.*' | xargs rm -rf||die
-fi
-
-chown -R $fermentrackUser:$fermentrackUser "$installPath"||die
-
-############
-### Set sticky bit! nom nom nom
-############
-find "$installPath" -type d -exec chmod g+rwxs {} \;||die
-
-
-############
-### Clone Fermentrack repositories
-############
-echo -e "\n***** Downloading most recent Fermentrack codebase... *****"
-cd "$installPath"
-# TODO - Flip back to https before release.
-sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
-
-
-############
-### Set up virtualenv directory
-############
-echo -e "\n***** Creating virtualenv directory... *****"
-cd "$installPath"
-sudo -u $fermentrackUser virtualenv "venv"
-
-
-############
-### Create secretsettings.py file
-############
-echo -e "\n***** Running make_secretsettings.sh from the script repo. *****"
-if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
-   cd "$installPath"/fermentrack/utils/
-   sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/make_secretsettings.sh
-else
-   echo "ERROR: Could not find fermentrack/utils/make_secretsettings.sh!"
-fi
-
-
-############
-### Run the upgrade script within Fermentrack
-############
-echo -e "\n***** Running upgrade.sh from the script repo to finalize the install. *****"
-if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
-   cd "$installPath"/fermentrack/utils/
-   sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh
-else
-   echo "ERROR: Could not find fermentrack/utils/upgrade.sh!"
-fi
-
-
-############
-### Check for insecure SSH key
-############
-defaultKey="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLNC9E7YjW0Q9btd9aUoAg++/wa06LtBMc1eGPTdu29t89+4onZk1gPGzDYMagHnuBjgBFr4BsZHtng6uCRw8fIftgWrwXxB6ozhD9TM515U9piGsA6H2zlYTlNW99UXLZVUlQzw+OzALOyqeVxhi/FAJzAI9jPLGLpLITeMv8V580g1oPZskuMbnE+oIogdY2TO9e55BWYvaXcfUFQAjF+C02Oo0BFrnkmaNU8v3qBsfQmldsI60+ZaOSnZ0Hkla3b6AnclTYeSQHx5YqiLIFp0e8A1ACfy9vH0qtqq+MchCwDckWrNxzLApOrfwdF4CSMix5RKt9AF+6HOpuI8ZX root@raspberrypi"
-
-if grep -q "$defaultKey" /etc/ssh/ssh_host_rsa_key.pub; then
-  echo "Replacing default SSH keys. You will need to remove the previous key from known hosts on any clients that have previously connected to this rpi."
-  if rm -f /etc/ssh/ssh_host_* && dpkg-reconfigure openssh-server; then
-     echo "Default SSH keys replaced."
-  else
-    echo "ERROR - Unable to replace SSH key. You probably want to take the time to do this on your own."
-  fi
-fi
-
-
-############
-### Set up nginx
-############
-echo -e "\n***** Copying nginx configuration to /etc/nginx and activating. *****"
-#cp "$myPath"/nginx-configs/default-fermentrack /etc/nginx/sites-available/default-fermentrack
-rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
-# Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
-sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
-rm -f /etc/nginx/sites-enabled/default &> /dev/null
-ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
-service nginx restart
-
-
-############
-### Install CRON job to launch Circus
-############
-echo -e "\n***** Running updateCronCircus.sh from the script repo. *****"
-if [ -f "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh ]; then
-   sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh add2cron
-   echo -e "\n***** Starting circus process monitor *****"
-   sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh start
-else
-   echo "ERROR: Could not find updateCronCircus.sh!"
-fi
-
-
-
-MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
-echo "Done installing Fermentrack!"
-echo ""
-echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
-echo ""
-echo "The fermentrack user has been set up with no password. Use 'sudo su ${fermentrackUser}' from this user to access the fermentrack user"
-echo ""
-echo "To view Fermentrack, enter http://${MYIP} into your web browser"
-echo ""
-echo "Happy Brewing!"
