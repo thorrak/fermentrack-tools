@@ -159,12 +159,12 @@ getAptPackages() {
     lastUpdate=$(stat -c %Y /var/lib/apt/lists)
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
-        printinfo "Last 'apt-get update' was awhile back. Updating now."
+        printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
         sudo apt-get update &> /dev/null||die
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
-    printinfo "apt is updated - installing git-core, build-essential, python-dev, and python-virtualenv."
+    printinfo "apt is updated - installing git-core, nginx, build-essential, python-dev, and python-virtualenv."
     printinfo "(This may take a few minutes during which everything will be silent) ..."
     sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server &> /dev/null || die
     printinfo "All packages installed successfully."
@@ -372,7 +372,7 @@ installationReport() {
   echo
   echo " - Fermentrack frontend    : http://${MYIP}"
   echo " - Fermentrack user        : ${fermentrackUser}"
-  echo " - Installation path       : ${installPath/fermentrack}"
+  echo " - Installation path       : ${installPath}/fermentrack"
   echo " - Fermentrack Version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
   echo " - Install Script Version  : ${scriptversion}"
   echo ""
