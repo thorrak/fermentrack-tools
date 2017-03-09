@@ -206,17 +206,6 @@ verifyInstallPath() {
           * ) exit;;
       esac
     fi
-  else
-    if [ "$installPath" != "/home/fermentrack" ]; then
-      read -p "This path does not exist, would you like to create it? [Y/n] " yn
-      if [ -z "$yn" ]; then
-        yn="y"
-      fi
-      case "$yn" in
-          y | Y | yes | YES| Yes ) printinfo "Creating directory..."; mkdir -p "$installPath";;
-          * ) printerror "User aborted..."; exit;;
-      esac
-    fi
   fi
   echo
 }
@@ -229,7 +218,7 @@ createConfigureUser() {
   if id -u $fermentrackUser >/dev/null 2>&1; then
     printinfo "User '$fermentrackUser' already exists, skipping..."
   else
-    useradd -m -G dialout $fermentrackUser||die
+    useradd -m -G dialout $fermentrackUser -s /bin/bash||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
     passwd -d $fermentrackUser||die
   fi
