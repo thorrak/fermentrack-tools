@@ -91,6 +91,29 @@ die () {
   exit "$st"
 }
 
+welcomeMessage() {
+  echo -n "${tan}"
+  cat << "EOF"
+ _____                              _                  _    
+|  ___|__ _ __ _ __ ___   ___ _ __ | |_ _ __ __ _  ___| | __
+| |_ / _ \ '__| '_ ` _ \ / _ \ '_ \| __| '__/ _` |/ __| |/ /
+|  _|  __/ |  | | | | | |  __/ | | | |_| | | (_| | (__|   < 
+|_|  \___|_|  |_| |_| |_|\___|_| |_|\__|_|  \__,_|\___|_|\_\
+
+EOF
+  echo -n "${reset}"
+  echo "Welcome to the installation of Fermentrack. This script will install fermentrack."
+  echo "A new user will be created and Fermentrack will be installed in that users home directory."
+  echo "When the installation is done with no errors Fermentrack is started and monitored automatically"
+  echo "For more information about Fermentrack please visit: https://github.com/thorrak/fermentrack"
+  echo
+  read -p "Do you want to continue to install Fermentrack? [y/N] " yn
+  case "$yn" in
+    y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
+    * ) exit;;
+  esac
+}
+
 
 verifyRunAsRoot() {
     # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
@@ -206,17 +229,6 @@ verifyInstallPath() {
           * ) exit;;
       esac
     fi
-  else
-    if [ "$installPath" != "/home/fermentrack" ]; then
-      read -p "This path does not exist, would you like to create it? [Y/n] " yn
-      if [ -z "$yn" ]; then
-        yn="y"
-      fi
-      case "$yn" in
-          y | Y | yes | YES| Yes ) printinfo "Creating directory..."; mkdir -p "$installPath";;
-          * ) printerror "User aborted..."; exit;;
-      esac
-    fi
   fi
   echo
 }
@@ -229,7 +241,7 @@ createConfigureUser() {
   if id -u $fermentrackUser >/dev/null 2>&1; then
     printinfo "User '$fermentrackUser' already exists, skipping..."
   else
-    useradd -m -G dialout $fermentrackUser||die
+    useradd -m -G dialout $fermentrackUser -s /bin/bash||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
     passwd -d $fermentrackUser||die
   fi
@@ -383,6 +395,7 @@ installationReport() {
 
 ## ------------------- Script "main" starts here -----------------------
 # Create install log file
+welcomeMessage
 exec > >(tee -i install.log)
 exec 2>&1
 
