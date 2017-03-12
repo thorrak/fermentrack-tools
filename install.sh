@@ -51,7 +51,8 @@
 package_name="Fermentrack"
 # if we get an argument to the script, use that for git-repo
 # default to https://github.com/thorrak/fermentrack.git
-github_repo=${1:-https://github.com/thorrak/fermentrack.git} 
+#github_repo=${1:-https://github.com/thorrak/fermentrack.git}
+github_repo="https://github.com/thorrak/fermentrack.git"
 green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
