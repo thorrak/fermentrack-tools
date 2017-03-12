@@ -57,6 +57,39 @@ red=$(tput setaf 1)
 tan=$(tput setaf 3)
 reset=$(tput sgr0)
 
+
+############## Command Line Options Parser
+
+INTERACTIVE=1
+
+# Help text
+function usage() {
+    echo "Usage: $0 [-h] [-n]" 1>&2
+    exit 1
+}
+
+while getopts "sh" opt; do
+  case ${opt} in
+    n)
+      INTERACTIVE=0  # Silent/Non-interactive Mode
+      ;;
+    h)
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+
+
+
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
 }
@@ -107,11 +140,13 @@ EOF
   echo "When the installation is done with no errors Fermentrack is started and monitored automatically"
   echo "For more information about Fermentrack please visit: https://github.com/thorrak/fermentrack"
   echo
-  read -p "Do you want to continue to install Fermentrack? [y/N] " yn
-  case "$yn" in
-    y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
-    * ) exit;;
-  esac
+  if [INTERACTIVE = 1]; then  # Don't ask this if we're running in noninteractive mode
+      read -p "Do you want to continue to install Fermentrack? [y/N] " yn
+      case "$yn" in
+        y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
+        * ) exit;;
+      esac
+  fi
 }
 
 
@@ -221,16 +256,18 @@ verifyFreeDiskSpace() {
 
 
 verifyInstallPath() {
-  if [ -d "$installPath" ]; then
-    if [ "$(ls -A ${installPath})" ]; then
-      read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
-      case "$yn" in
-          y | Y | yes | YES| Yes ) printinfo "Ok, we warned you!";;
-          * ) exit;;
-      esac
-    fi
+  if [INTERACTIVE = 1]; then  # Don't ask if we're in non-interactive mode
+      if [ -d "$installPath" ]; then
+        if [ "$(ls -A ${installPath})" ]; then
+          read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
+          case "$yn" in
+              y | Y | yes | YES| Yes ) printinfo "Ok, we warned you!";;
+              * ) exit;;
+          esac
+        fi
+      fi
+      echo
   fi
-  echo
 }
 
 
@@ -399,33 +436,37 @@ welcomeMessage
 exec > >(tee -i install.log)
 exec 2>&1
 
-printinfo "To accept the default answer, just press Enter."
-printinfo "The default is capitalized in a Yes/No question: [Y/n]"
-printinfo "or shown between brackets for other questions: [default]"
-echo
+if [INTERACTIVE = 1]; then  # Don't ask questions if we're running in noninteractive mode
+    printinfo "To accept the default answer, just press Enter."
+    printinfo "The default is capitalized in a Yes/No question: [Y/n]"
+    printinfo "or shown between brackets for other questions: [default]"
+    echo
 
-date=$(date)
-read -p "The time is currently set to $date. Is this correct? [Y/n]" choice
-case "$choice" in
-  n | N | no | NO | No )
-    dpkg-reconfigure tzdata;;
-  * )
-esac
+    date=$(date)
+    read -p "The time is currently set to $date. Is this correct? [Y/n]" choice
+    case "$choice" in
+      n | N | no | NO | No )
+        dpkg-reconfigure tzdata;;
+      * )
+    esac
 
-printinfo "All scripts associated with BrewPi & Fermentrack are now installed to a user's home directory"
-printinfo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
-printwarn "Any data in the user's home directory may be ERASED during install!"
-echo
-read -p "What user would you like to install BrewPi under? [fermentrack]: " fermentrackUser
-if [ -z "$fermentrackUser" ]; then
-  fermentrackUser="fermentrack"
-else
-  case "$fermentrackUser" in
-    y | Y | yes | YES| Yes )
-        fermentrackUser="fermentrack";; # accept default when y/yes is answered
-    * )
-        ;;
-  esac
+    printinfo "All scripts associated with BrewPi & Fermentrack are now installed to a user's home directory"
+    printinfo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
+    printwarn "Any data in the user's home directory may be ERASED during install!"
+    echo
+    read -p "What user would you like to install BrewPi under? [fermentrack]: " fermentrackUser
+    if [ -z "$fermentrackUser" ]; then
+      fermentrackUser="fermentrack"
+    else
+      case "$fermentrackUser" in
+        y | Y | yes | YES| Yes )
+            fermentrackUser="fermentrack";; # accept default when y/yes is answered
+        * )
+            ;;
+      esac
+    fi
+else  # If we're in non-interactive mode, default the user
+    fermentrackUser="fermentrack"
 fi
 
 installPath="/home/$fermentrackUser"

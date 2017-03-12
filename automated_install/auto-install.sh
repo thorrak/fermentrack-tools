@@ -140,7 +140,8 @@ launchInstall() {
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name}
-    sudo bash ./install.sh
+    # The -s flag makes install.sh non-interactive
+    sudo bash ./install.sh -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
     echo -e "::: ${scriptPath}/${tools_name}/install.sh"
