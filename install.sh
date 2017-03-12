@@ -68,7 +68,7 @@ function usage() {
     exit 1
 }
 
-while getopts "sh" opt; do
+while getopts "nh" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
