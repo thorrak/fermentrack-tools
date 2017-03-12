@@ -140,7 +140,7 @@ EOF
   echo "When the installation is done with no errors Fermentrack is started and monitored automatically"
   echo "For more information about Fermentrack please visit: https://github.com/thorrak/fermentrack"
   echo
-  if [[${INTERACTIVE} -eq 1]]; then  # Don't ask this if we're running in noninteractive mode
+  if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask this if we're running in noninteractive mode
       read -p "Do you want to continue to install Fermentrack? [y/N] " yn
       case "$yn" in
         y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
@@ -256,7 +256,7 @@ verifyFreeDiskSpace() {
 
 
 verifyInstallPath() {
-  if [[${INTERACTIVE} -eq 1]]; then  # Don't ask if we're in non-interactive mode
+  if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask if we're in non-interactive mode
       if [ -d "$installPath" ]; then
         if [ "$(ls -A ${installPath})" ]; then
           read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
@@ -436,7 +436,7 @@ welcomeMessage
 exec > >(tee -i install.log)
 exec 2>&1
 
-if [[${INTERACTIVE} -eq 1]]; then  # Don't ask questions if we're running in noninteractive mode
+if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask questions if we're running in noninteractive mode
     printinfo "To accept the default answer, just press Enter."
     printinfo "The default is capitalized in a Yes/No question: [Y/n]"
     printinfo "or shown between brackets for other questions: [default]"
