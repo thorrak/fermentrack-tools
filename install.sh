@@ -170,12 +170,11 @@ verifyRunAsRoot() {
     if [[ ${EUID} -eq 0 ]]; then
         printinfo "This script was launched as root. Continuing installation."
     else
-        printinfo "This script was called without root privileges. It installs and updates several packages, and the"
-        printinfo "script it calls within ${tools_name} creates user accounts and updates  system settings. To"
-        printinfo "continue this script will now attempt to use 'sudo' to relaunch itself as root. Please check"
-        printinfo "the contents of this script (as well as the install script within ${tools_name} for any concerns"
-        printinfo "with this requirement. Please be sure to access this script (and ${tools_name}) from a trusted"
-        printinfo "source."
+        printinfo "This script was called without root privileges. It installs and updates several packages,"
+        printinfo "creates user accounts and updates system settings. To continue this script will now attempt"
+        printinfo "to use 'sudo' to relaunch itself as root. Please check the contents of this script for any"
+        printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
+        echo
 
         if command -v sudo &> /dev/null; then
             # TODO - Make this require user confirmation before continuing
@@ -452,7 +451,9 @@ installationReport() {
 
 ## ------------------- Script "main" starts here -----------------------
 # Create install log file
+verifyRunAsRoot
 welcomeMessage
+
 exec > >(tee -i install.log)
 exec 2>&1
 
@@ -495,7 +496,7 @@ printinfo "Configuring under user $fermentrackUser"
 printinfo "Configuring in directory $installPath"
 echo
 
-verifyRunAsRoot
+
 verifyInternetConnection
 verifyInstallerVersion
 getAptPackages
