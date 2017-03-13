@@ -334,7 +334,7 @@ fixPermissions() {
 cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath"
-  if ["$github_repo" != "master"]; then
+  if [ "$github_repo" != "master" ]; then
     sudo -u $fermentrackUser git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
   else
     sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
