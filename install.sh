@@ -49,10 +49,8 @@
 
 
 package_name="Fermentrack"
-# if we get an argument to the script, use that for git-repo
-# default to https://github.com/thorrak/fermentrack.git
-#github_repo=${1:-https://github.com/thorrak/fermentrack.git}
 github_repo="https://github.com/thorrak/fermentrack.git"
+github_branch="master"
 green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
@@ -65,17 +63,32 @@ INTERACTIVE=1
 
 # Help text
 function usage() {
-    echo "Usage: $0 [-h] [-n]" 1>&2
+    echo "Usage: $0 [-h] [-n] [-r <repo_url>] [-b <branch>]" 1>&2
+    echo "Options:"
+    echo "  -h               This help"
+    echo "  -n               Run non interactive installation"
+    echo "  -r <repo_url>    Specify fermentrack repository (only for development)"
+    echo "  -b <branch>      Branch used (only for development or testing)"
     exit 1
 }
 
-while getopts "nh" opt; do
+while getopts "nhr:b:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
       ;;
+    r)
+      github_repo=$OPTARG
+      ;;
+    b)
+      github_branch=$OPTARG
+      ;;
     h)
       usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
       exit 1
       ;;
     \?)
@@ -321,7 +334,11 @@ fixPermissions() {
 cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath"
-  sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+  if ["$github_repo" != "master"]; then
+    sudo -u $fermentrackUser git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+  else
+    sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+  fi
   echo
 }
 
