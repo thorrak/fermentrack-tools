@@ -49,10 +49,8 @@
 
 
 package_name="Fermentrack"
-# if we get an argument to the script, use that for git-repo
-# default to https://github.com/thorrak/fermentrack.git
-#github_repo=${1:-https://github.com/thorrak/fermentrack.git}
 github_repo="https://github.com/thorrak/fermentrack.git"
+github_branch="master"
 green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
@@ -65,17 +63,32 @@ INTERACTIVE=1
 
 # Help text
 function usage() {
-    echo "Usage: $0 [-h] [-n]" 1>&2
+    echo "Usage: $0 [-h] [-n] [-r <repo_url>] [-b <branch>]" 1>&2
+    echo "Options:"
+    echo "  -h               This help"
+    echo "  -n               Run non interactive installation"
+    echo "  -r <repo_url>    Specify fermentrack repository (only for development)"
+    echo "  -b <branch>      Branch used (only for development or testing)"
     exit 1
 }
 
-while getopts "nh" opt; do
+while getopts "nhr:b:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
       ;;
+    r)
+      github_repo=$OPTARG
+      ;;
+    b)
+      github_branch=$OPTARG
+      ;;
     h)
       usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
       exit 1
       ;;
     \?)
@@ -157,17 +170,16 @@ verifyRunAsRoot() {
     if [[ ${EUID} -eq 0 ]]; then
         printinfo "This script was launched as root. Continuing installation."
     else
-        printinfo "This script was called without root privileges. It installs and updates several packages, and the"
-        printinfo "script it calls within ${tools_name} creates user accounts and updates  system settings. To"
-        printinfo "continue this script will now attempt to use 'sudo' to relaunch itself as root. Please check"
-        printinfo "the contents of this script (as well as the install script within ${tools_name} for any concerns"
-        printinfo "with this requirement. Please be sure to access this script (and ${tools_name}) from a trusted"
-        printinfo "source."
+        printinfo "This script was called without root privileges. It installs and updates several packages,"
+        printinfo "creates user accounts and updates system settings. To continue this script will now attempt"
+        printinfo "to use 'sudo' to relaunch itself as root. Please check the contents of this script for any"
+        printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
+        echo
 
         if command -v sudo &> /dev/null; then
             # TODO - Make this require user confirmation before continuing
             printinfo "This script will now attempt to relaunch using sudo."
-            exec sudo bash "$@"
+            exec sudo bash "$0" "$@"
             exit $?
         else
             printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
@@ -219,6 +231,8 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
+        sudo apt-key update &> /dev/null||die
+        printinfo "'apt-key update' ran successfully."
         sudo apt-get update &> /dev/null||die
         printinfo "'apt-get update' ran successfully."
     fi
@@ -321,7 +335,11 @@ fixPermissions() {
 cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath"
-  sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+  if [ "$github_repo" != "master" ]; then
+    sudo -u $fermentrackUser git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+  else
+    sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+  fi
   echo
 }
 
@@ -433,7 +451,9 @@ installationReport() {
 
 ## ------------------- Script "main" starts here -----------------------
 # Create install log file
+verifyRunAsRoot
 welcomeMessage
+
 exec > >(tee -i install.log)
 exec 2>&1
 
@@ -476,7 +496,7 @@ printinfo "Configuring under user $fermentrackUser"
 printinfo "Configuring in directory $installPath"
 echo
 
-verifyRunAsRoot
+
 verifyInternetConnection
 verifyInstallerVersion
 getAptPackages
