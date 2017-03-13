@@ -232,6 +232,8 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
+        sudo apt-key update &> /dev/null||die
+        printinfo "'apt-key update' ran successfully."
         sudo apt-get update &> /dev/null||die
         printinfo "'apt-get update' ran successfully."
     fi
