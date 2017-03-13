@@ -180,7 +180,7 @@ verifyRunAsRoot() {
         if command -v sudo &> /dev/null; then
             # TODO - Make this require user confirmation before continuing
             printinfo "This script will now attempt to relaunch using sudo."
-            exec sudo bash "$@"
+            exec sudo bash "$0" "$@"
             exit $?
         else
             printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
