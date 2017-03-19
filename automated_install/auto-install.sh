@@ -121,7 +121,7 @@ getAptPackages() {
     fi
 
     sudo apt-key update &> /dev/null||die
-    printinfo "::: 'apt-key update' ran successfully."
+    echo "::: 'apt-key update' ran successfully."
 
     # Installing the nginx stack along with everything we need for circus, etc.
     echo "::: apt is updated - installing git-core, build-essential, python-dev, and python-virtualenv."
