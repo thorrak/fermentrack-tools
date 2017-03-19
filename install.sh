@@ -348,7 +348,8 @@ createPythonVenv() {
   # Set up virtualenv directory
   printinfo "Creating virtualenv directory..."
   cd "$installPath"
-  sudo -u $fermentrackUser virtualenv "venv"
+  # Supposedly, --no-site-packages is now default behavior - including it nonetheless just in case
+  sudo -u $fermentrackUser virtualenv --no-site-packages "venv"
   echo
 }
 
