@@ -129,6 +129,7 @@ warn() {
   echo "${red}*** ----------------------------------${reset}"
   echo "${red}*** See above lines for error message${reset}"
   echo "${red}*** Setup NOT completed${reset}"
+  echo "${red}*** More information in the \"install.log\" file${reset}"
 }
 
 
@@ -196,7 +197,7 @@ verifyRunAsRoot() {
 # Check for network connection
 verifyInternetConnection() {
   printinfo "Checking for Internet connection: "
-  ping -c 3 github.com &> /dev/null
+  ping -c 3 github.com &>> install.log
   if [ $? -ne 0 ]; then
       echo
       printerror "Could not ping github.com. Are you sure you have a working Internet connection?"
@@ -214,7 +215,7 @@ verifyInstallerVersion() {
   unset CDPATH
   myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
   printinfo ""$myPath"/update-tools-repo.sh start."
-  bash "$myPath"/update-tools-repo.sh
+  bash "$myPath"/update-tools-repo.sh &>> install.log
   printinfo ""$myPath"/update-tools-repo.sh end."
   if [ $? -ne 0 ]; then
     printerror "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
@@ -231,15 +232,15 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        sudo apt-key update &> /dev/null||die
+        sudo apt-key update &>> install.log||die
         printinfo "'apt-key update' ran successfully."
-        sudo apt-get update &> /dev/null||die
+        sudo apt-get update &>> install.log||die
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
     printinfo "apt is updated - installing git-core, nginx, build-essential, python-dev, and python-virtualenv."
     printinfo "(This may take a few minutes during which everything will be silent) ..."
-    sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server &> /dev/null || die
+    sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server &>> install.log || die
     printinfo "All packages installed successfully."
     echo
 }
@@ -293,7 +294,7 @@ createConfigureUser() {
   if id -u $fermentrackUser >/dev/null 2>&1; then
     printinfo "User '$fermentrackUser' already exists, skipping..."
   else
-    useradd -m -G dialout $fermentrackUser -s /bin/bash||die
+    useradd -m -G dialout $fermentrackUser -s /bin/bash &>> install.log ||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
     passwd -d $fermentrackUser||die
   fi
@@ -372,9 +373,10 @@ makeSecretSettings() {
 # Run the upgrade script within Fermentrack
 runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
+  printinfo "This may take a few minutes during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
   else
     printerror "Could not find fermentrack/utils/upgrade.sh!"
     exit 1
@@ -407,7 +409,7 @@ setupNginx() {
   # Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
   sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
   rm -f /etc/nginx/sites-enabled/default &> /dev/null
-  ln -s /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
+  ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
   service nginx restart
 }
 
@@ -431,7 +433,6 @@ setupCronCircus() {
 installationReport() {
   MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
   echo "Done installing Fermentrack!"
-  echo
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
   echo
@@ -455,6 +456,9 @@ installationReport() {
 verifyRunAsRoot
 welcomeMessage
 
+# This one should remove color escape codes from log, but it needs some more
+# work so the EOL esc codes also get stripped.
+# exec > >( tee >( sed 's/\x1B\[[0-9;]*[JKmsu]//g' >> install.log ) )
 exec > >(tee -i install.log)
 exec 2>&1
 
