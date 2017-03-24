@@ -11,7 +11,7 @@ Various tools to setup/update/configure BrewPi/Fermentrack
 
 * **automated_install/auto-install.sh** - This is a bash script that is intended to be called via `curl -L install.fermentrack.com | sudo bash`
 
-##Automated Fermentrack Installation Instructions
+## Automated Fermentrack Installation Instructions
 
 Want to quickly install Fermentrack onto your Raspberry Pi? Installation can now be completed with one easy command:
 
@@ -19,7 +19,7 @@ Want to quickly install Fermentrack onto your Raspberry Pi? Installation can now
 2. Run `curl -L install.fermentrack.com | sudo bash`
 3. Done!
 
-##Manual Fermentrack Installation Instructions
+## Manual Fermentrack Installation Instructions
 
 Prefer to install everything manually? No problem. Just run the following and you'll be up and running quickly:
 
@@ -32,7 +32,7 @@ Prefer to install everything manually? No problem. Just run the following and yo
 7. Done!
 
 
-##Note from Thorrak
+## Note from Thorrak
 This script was originally based on the fantastic brewpi-script by Elco/Freeder. Since then, it has been modified to install Fermentrack (instead of brewpi-www and brewpi-script) and utilize scripts in those repos to manage updates.
 
 The automated installer was inspired by the Pi-Hole project. 
