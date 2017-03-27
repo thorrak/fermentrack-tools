@@ -32,7 +32,7 @@ server {
     location /media {
       alias /home/brewpiuser/fermentrack/media/;
       access_log off;
-      expires 90s;
+      expires 30s;
       log_not_found off;
     }
 
@@ -46,7 +46,7 @@ server {
 
     # alias favicon.* to static
     location ~ ^/favicon.(\w*)$ {
-      alias /home/brewpiuser/fermentrack/static_collected/favicon.$1;
+      alias /home/brewpiuser/fermentrack/collected_static/favicon.$1;
       access_log off;
       expires 90s;
       log_not_found off;
