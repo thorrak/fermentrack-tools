@@ -417,10 +417,10 @@ setupNginx() {
 setupCronCircus() {
   # Install CRON job to launch Circus
   printinfo "Running updateCronCircus.sh from the script repo"
-  if [ -f "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh ]; then
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh add2cron
+  if [ -f "$installPath"/fermentrack/utils/updateCronCircus.sh ]; then
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
     printinfo "Starting circus process monitor."
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/brewpi-script/utils/updateCronCircus.sh start
+    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
   else
     # whops, something is wrong.. 
     printerror "Could not find updateCronCircus.sh!"
