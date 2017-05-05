@@ -238,9 +238,19 @@ getAptPackages() {
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
-    printinfo "apt is updated - installing git-core, nginx, build-essential, python-dev, and python-virtualenv."
+    printinfo "apt is updated - installing git-core, nginx, python-dev, and a handful of other packages."
     printinfo "(This may take a few minutes during which everything will be silent) ..."
-    sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server &>> install.log || die
+
+    # For the curious:
+    # git-core enables us to get the code from git (har har)
+    # build-essential allows for building certain python (& other) packages
+    # python-dev, python-pip, and python-virtualenv all enable us to run Python scripts
+    # nginx is a webserver
+    # libzmq-dev and libevent-dev are used by rabbitmq-server
+    # rabbitmq-server is used by Celery to manage delayed tasks
+    # avrdude is used to flash Arduino-based devices
+
+    sudo apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server avrdude &>> install.log || die
     printinfo "All packages installed successfully."
     echo
 }
