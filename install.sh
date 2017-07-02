@@ -152,8 +152,13 @@ EOF
   echo -n "${reset}"
   echo "Welcome to the installation of Fermentrack. This script will install fermentrack."
   echo "A new user will be created and Fermentrack will be installed in that users home directory."
-  echo "When the installation is done with no errors Fermentrack is started and monitored automatically"
-  echo "For more information about Fermentrack please visit: https://github.com/thorrak/fermentrack"
+  echo "When the installation is done with no errors Fermentrack is started and monitored automatically."
+  echo ""
+  echo "Please note - Any existing apps that require Apache (including RaspberryPints and BrewPi-www)"
+  echo "will be deactivated. If you want support for these apps it can be optionally installed later."
+  echo "Please read http://apache.fermentrack.com/ for more information."
+  echo ""
+  echo "For more information about Fermentrack please visit: http://fermentrack.com/"
   echo
   if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask this if we're running in noninteractive mode
       read -p "Do you want to continue to install Fermentrack? [y/N] " yn
@@ -185,7 +190,6 @@ verifyRunAsRoot() {
         else
             printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
             printerror "Please run this script as root and it will be automatically installed."
-            printerror "You should be able to do this by running '${install_curl_command}'"
             exit 1
         fi
     fi
@@ -273,7 +277,7 @@ verifyFreeDiskSpace() {
     printerror "You only have ${existing_free_kilobytes} KB free."
     printerror "If this is a new install you may need to expand your disk."
     printerror "Try running 'sudo raspi-config', and choose the 'expand file system option'"
-    printerror "After rebooting, run this installation again. (${install_curl_command})"
+    printerror "After rebooting, run this installation again."
     printerror "Insufficient free space, exiting..."
     exit 1
   fi
