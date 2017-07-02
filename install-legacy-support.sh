@@ -46,8 +46,8 @@ reset=$(tput sgr0)
 
 # These are currently unused (hence the exclusion from the help text). Eventually, I may use them to make the ports
 # configurable.
-fermentrack_port = 80
-legacy_port = 81
+fermentrack_port=80
+legacy_port=81
 
 
 ############## Command Line Options Parser
@@ -141,7 +141,7 @@ welcomeMessage() {
 
 EOF
   echo -n "${reset}"
-  echo "This script installs support for legacy (PHP/Apache) applications alongside Fermentrack."
+  echo "This script installs support for legacy (PHP/Apache) applications under Nginx."
   echo "Legacy applications (such as RaspberryPints and brewpi-www) traditionally used Apache to"
   echo "serve webpages. This script will deactivate Apache and configure nginx to serve those"
   echo "pages instead."
@@ -299,14 +299,15 @@ setupNginx() {
 
 installationReport() {
   MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+  MYIP_TRIM="$(echo -e "${MYIP}" | tr -d '[:space:]')"
   echo "Done installing legacy (PHP) application support!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, installation of support is complete!"
   echo
-  echo "To view legacy applications, enter http://${MYIP}:81 into your web browser."
+  echo "To view legacy applications, enter http://${MYIP_TRIM}:81 into your web browser."
   echo
-  echo " - Fermentrack frontend    : http://${MYIP}"
-  echo " - Legacy frontend         : http://${MYIP}:81"
+  echo " - Fermentrack frontend    : http://${MYIP_TRIM}"
+  echo " - Legacy frontend         : http://${MYIP_TRIM}:81"
   echo " - Legacy file location    : /var/www/html"
   echo ""
   echo "Happy Brewing!"
