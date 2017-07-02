@@ -131,13 +131,20 @@ getAptPackages() {
     echo ":: All packages installed successfully."
 }
 
-cloneFromGit() {
-    # TODO - Determine if we want to move/delete the repo dir if it exists
-    echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
-    git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die
-    echo ":: Repo was cloned successfully."
+handleExistingTools() {
+  echo -e ":::: Existing instance of ${tools_name} found at ${scriptPath}/${tools_name}"
+  echo -e ":::: Moving to ${scriptPath}/${tools_name}.old/"
+  rm -r ${tools_name}.old||die
+  mv ${tools_name} ${tools_name}.old||die
+  echo -e ":::: Moved successfully. Reattempting clone."
+  git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die
 }
 
+cloneFromGit() {
+    echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
+    git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
+    echo ":: Repo was cloned successfully."
+}
 launchInstall() {
     echo "::: This script will now attempt to install ${package_name} using the 'install.sh' script that has been created at"
     echo -e "::: ${scriptPath}/${tools_name}/install.sh"
