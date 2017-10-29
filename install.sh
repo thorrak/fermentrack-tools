@@ -55,7 +55,7 @@ green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
 reset=$(tput sgr0)
-
+myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
 ############## Command Line Options Parser
 
@@ -445,7 +445,8 @@ setupCronCircus() {
 
 
 installationReport() {
-  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+#  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
   echo "Done installing Fermentrack!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
@@ -457,8 +458,9 @@ installationReport() {
   echo " - Fermentrack frontend    : http://${MYIP}"
   echo " - Fermentrack user        : ${fermentrackUser}"
   echo " - Installation path       : ${installPath}/fermentrack"
-  echo " - Fermentrack Version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
-  echo " - Install Script Version  : ${scriptversion}"
+  echo " - Fermentrack version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
+  echo " - Install script version  : ${scriptversion}"
+  echo " - Install tools path      : ${myPath}"
   echo ""
   echo "Happy Brewing!"
   echo ""
