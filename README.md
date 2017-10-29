@@ -10,6 +10,9 @@ Various tools to install/configure Fermentrack
 * **automated_install/auto-install.sh** - This is a bash script that is intended to be called via `curl -L install.fermentrack.com | sudo bash`
 
 **Nginx Config Files:**
+* **default-fermentrack** - This is the default nginx configuration file for Fermentrack and runs the app on port 80 from the default installation location (/home/*user*/fermentrack)
+* **optional-apache** - This tells nginx to open port 81 for the purpose of serving files that are housed at the default location for Apache (/var/www/html). This allows apps that were previously served by Apache to be easily served by nginx instead.
+
 
 ## Automated Fermentrack Installation Instructions
 
