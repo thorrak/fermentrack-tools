@@ -391,7 +391,7 @@ makeSecretSettings() {
 # Run the upgrade script within Fermentrack
 runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
-  printinfo "This may take a few minutes during which everything will be silent..."
+  printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
     cd "$installPath"/fermentrack/utils/
     sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
@@ -440,11 +440,16 @@ setupCronCircus() {
     printinfo "Starting circus process monitor."
     sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
   else
-    # whops, something is wrong.. 
+    # whoops, something is wrong...
     printerror "Could not find updateCronCircus.sh!"
     exit 1
   fi
   echo
+}
+
+tiltSetSetcap() {
+  printinfo "Running setcap for bluetooth compatibility"
+  sudo setcap cap_net_raw+eip "$installPath"/venv/bin/python2 &>> install.log
 }
 
 
@@ -537,5 +542,6 @@ runFermentrackUpgrade
 fixInsecureSSH
 setupNginx
 setupCronCircus
+tiltSetSetcap
 installationReport
 
