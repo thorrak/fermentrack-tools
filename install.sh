@@ -253,8 +253,12 @@ getAptPackages() {
     # libzmq-dev and libevent-dev are used by rabbitmq-server
     # rabbitmq-server is used by Celery to manage delayed tasks
     # avrdude is used to flash Arduino-based devices
+    # bluez/python-bluez are used for interaction with bluetooth devices (for Tilt support)
+    # python-scipy/python-numpy are used for Tilt calibration
+    # redis-server is used for gravity sensor support/communication
 
     apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server avrdude &>> install.log || die
+    apt-get install -y bluez python-bluez python-scipy python-numpy libcap2-bin redis-server
     printinfo "All packages installed successfully."
     echo
 }
