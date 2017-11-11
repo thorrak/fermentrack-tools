@@ -55,7 +55,7 @@ green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
 reset=$(tput sgr0)
-
+myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
 ############## Command Line Options Parser
 
@@ -399,7 +399,7 @@ makeSecretSettings() {
 # Run the upgrade script within Fermentrack
 runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
-  printinfo "This may take a few minutes during which everything will be silent..."
+  printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
     cd "$installPath"/fermentrack/utils/
     sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
@@ -448,7 +448,7 @@ setupCronCircus() {
     printinfo "Starting circus process monitor."
     sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
   else
-    # whops, something is wrong.. 
+    # whoops, something is wrong...
     printerror "Could not find updateCronCircus.sh!"
     exit 1
   fi
@@ -457,7 +457,8 @@ setupCronCircus() {
 
 
 installationReport() {
-  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+#  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
+  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
   echo "Done installing Fermentrack!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
@@ -469,8 +470,9 @@ installationReport() {
   echo " - Fermentrack frontend    : http://${MYIP}"
   echo " - Fermentrack user        : ${fermentrackUser}"
   echo " - Installation path       : ${installPath}/fermentrack"
-  echo " - Fermentrack Version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
-  echo " - Install Script Version  : ${scriptversion}"
+  echo " - Fermentrack version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
+  echo " - Install script version  : ${scriptversion}"
+  echo " - Install tools path      : ${myPath}"
   echo ""
   echo "Happy Brewing!"
   echo ""

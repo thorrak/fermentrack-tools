@@ -134,7 +134,7 @@ getAptPackages() {
 handleExistingTools() {
   echo -e ":::: Existing instance of ${tools_name} found at ${scriptPath}/${tools_name}"
   echo -e ":::: Moving to ${scriptPath}/${tools_name}.old/"
-  rm -r ${tools_name}.old||die
+  rm -r ${tools_name}.old &> /dev/null
   mv ${tools_name} ${tools_name}.old||die
   echo -e ":::: Moved successfully. Reattempting clone."
   git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die
