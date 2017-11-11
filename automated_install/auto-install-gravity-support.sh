@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-# auto-install.sh
+# auto-install-gravity-support.sh
 #
-# This script attempts to automatically download fermentrack-tools and use install.sh to install Fermentrack.
+# This script attempts to update the Fermentrack environment to incorporate the changes required to support specific
+# gravity sensor support (including support for Tilt hydrometers which require specific permissions).
+#
 # It can be run via curl (See install_curl_command below) which enables the user to install everything with one
 # command.
 
@@ -19,8 +21,8 @@
 # SOFTWARE.
 
 package_name="Fermentrack"
-install_curl_url="install.fermentrack.com"
-install_curl_command="curl -L install.fermentrack.com | sudo bash"
+install_curl_url="install-gravity-support.fermentrack.com"
+install_curl_command="curl -L install-gravity-support.fermentrack.com | sudo bash"
 tools_name="fermentrack-tools"
 tools_repo_url="https://github.com/thorrak/fermentrack-tools.git"
 
@@ -83,7 +85,7 @@ verifyRunAsRoot() {
 
 verifyFreeDiskSpace() {
   echo "::: Verifying free disk space..."
-  local required_free_kilobytes=512000
+  local required_free_kilobytes=256000
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
@@ -146,17 +148,17 @@ cloneFromGit() {
     echo ":: Repo was cloned successfully."
 }
 launchInstall() {
-    echo "::: This script will now attempt to install ${package_name} using the 'install.sh' script that has been created at"
-    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
+    echo "::: This script will now attempt to install ${package_name} using the install script that has been created at"
+    echo -e "::: ${scriptPath}/${tools_name}/install-gravity-support.sh"
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name}
-    # The -n flag makes install.sh non-interactive
-    sudo bash ./install.sh -n
+    # The -n flag makes install-legacy-support.sh non-interactive
+    sudo bash ./install-gravity-support.sh -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
-    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
+    echo -e "::: ${scriptPath}/${tools_name}/install-legacy-support.sh"
 }
 
 

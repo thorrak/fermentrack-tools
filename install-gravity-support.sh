@@ -1,27 +1,9 @@
 #!/usr/bin/env bash
 
-# install-legacy-support.sh
+# install-gravity-support.sh
 #
-# This script attempts to enable installation of Fermentrack alongside BrewPi/RaspberryPints (which use Apache).
-# Technically, this script modifies one of the two to use a port other than 80, and then
-
-
-# Portions of this script were loosely based on brewpi-tools.
-
-# Copyright 2013 BrewPi
-
-# BrewPi is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# BrewPi is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with BrewPi.  If not, see <http://www.gnu.org/licenses/>.
+# This script attempts to update the Fermentrack environment to incorporate the changes required to support specific
+# gravity sensor support (including support for Tilt hydrometers which require specific permissions).
 
 # Fermentrack is free software, and is distributed under the terms of the MIT license.
 # A copy of the MIT license should be included with Fermentrack. If not, a copy can be
@@ -141,13 +123,13 @@ welcomeMessage() {
 
 EOF
   echo -n "${reset}"
-  echo "This script installs support for legacy (PHP/Apache) applications under Nginx."
-  echo "Legacy applications (such as RaspberryPints and brewpi-www) traditionally used Apache to"
-  echo "serve webpages. This script will deactivate Apache and configure nginx to serve those"
-  echo "pages instead."
+  echo "This script installs support for specific gravity sensors within Fermentrack."
+  echo "It is only necessary if you installed using an old version of the install script. Once"
+  echo "installation completes, you will need to enable specific gravity sensor support from"
+  echo "the Fermentrack settings page (the gear icon in the upper right)."
   echo
   if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask this if we're running in noninteractive mode
-      read -p "Do you want to continue to install legacy (PHP) application support? [y/N] " yn
+      read -p "Do you want to continue to install specific gravity sensor support? [y/N] " yn
       case "$yn" in
         y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
         * ) exit;;
@@ -215,6 +197,20 @@ verifyInstallerVersion() {
 }
 
 
+# Run the upgrade script within Fermentrack
+verifyInstallLocation() {
+  printinfo "This script requires an installation of Fermentrack to the default directory to complete."
+  if [ -a /home/fermentrack/fermentrack/utils/upgrade.sh ]; then
+    printinfo "::: Default install location found!"
+  else
+    printerror "Could not find /home/fermentrack/fermentrack/utils/upgrade.sh!"
+    exit 1
+  fi
+  echo
+}
+
+
+
 # getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
 getAptPackages() {
     printinfo "Installing dependencies using apt-get"
@@ -239,18 +235,20 @@ getAptPackages() {
     # nginx is a webserver
     # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
+
+    # Technically, this is the first time most users of this script will see redis-server. It's included here for Huey.
     apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx redis-server avrdude &>> install.log || die
 
+    # This removes the packages previously used by celery
+    printinfo "Removing packages no longer required by Fermentrack (libzmq-dev, libevent-dev, and rabbitmq-server)"
+    apt-get remove -y libzmq-dev libevent-dev rabbitmq-server &>> install.log || die
+
+    printinfo "Now installing additional packages required for gravity sensor support (including Tilt)"
     # These packages are required for Bluetooth and Tilt configuration support
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
     # python-scipy and python-numpy are for Tilt configuration support
     apt-get install -y redis-server bluez python-bluez python-scipy python-numpy libcap2-bin &>>install.log || die
-
-
-    printinfo "Now installing additional packages required for legacy (PHP/Apache) software support"
-    # These packages are required for PHP support. PHP support is required by BrewPi and RaspberryPints
-    apt-get install -y php5-common php5-cli php5-fpm &>>install.log || die
 
     printinfo "All packages installed successfully."
     echo
@@ -282,39 +280,49 @@ verifyFreeDiskSpace() {
 }
 
 
-deactivateApache() {
-  printinfo "Deactivating launch of Apache at startup (if active)"
-  # Disable auto-launch of apache2 on startup
-  update-rc.d apache2 disable
-  # then explicitly stop apache
-  service apache2 stop
+setPythonSetcap() {
+  printinfo "Enabling python to query bluetooth without being root"
+
+  setcap cap_net_raw+eip /home/fermentrack/venv/bin/python
+}
+
+enableSitePackages() {
+  printinfo "Updating the python virtualenv to support global site packages"
+  if [ -a /home/fermentrack/venv/lib/python2.7/no-global-site-packages.txt ]; then
+    rm /home/fermentrack/venv/lib/python2.7/no-global-site-packages.txt
+    printinfo "::: virtualenv updated!"
+  else
+    printinfo "::: Unable to update virtualenv (it may already have global site packages enabled)"
+  fi
 }
 
 
-# Set up nginx
-setupNginx() {
-  printinfo "Copying nginx configuration to /etc/nginx and activating."
-  rm -f /etc/nginx/sites-available/optional-apache &> /dev/null
-  cp "$myPath"/nginx-configs/optional-apache /etc/nginx/sites-available/optional-apache
-  rm -f /etc/nginx/sites-enabled/default &> /dev/null
-  ln -sf /etc/nginx/sites-available/optional-apache /etc/nginx/sites-enabled/optional-apache
-  service php5-fpm restart
-  service nginx restart
+# Run the upgrade script within Fermentrack
+runFermentrackUpgrade() {
+  printinfo "Running upgrade.sh from your installation of Fermentrack to finalize the update."
+  printinfo "This may take a few minutes during which everything will be silent..."
+
+  if [ -a /home/fermentrack/fermentrack/utils/upgrade.sh ]; then
+    cd /home/fermentrack/fermentrack/utils/
+    sudo -u fermentrack bash /home/fermentrack/fermentrack/utils/upgrade.sh &>> install.log
+  else
+    printerror "Could not find /home/fermentrack/fermentrack/utils/upgrade.sh!"
+    exit 1
+  fi
 }
 
 
 installationReport() {
   MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
   MYIP_TRIM="$(echo -e "${MYIP}" | tr -d '[:space:]')"
-  echo "Done installing legacy (PHP) application support!"
+  echo "Done installing gravity sensor support!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, installation of support is complete!"
   echo
-  echo "To view legacy applications, enter http://${MYIP_TRIM}:81 into your web browser."
+  echo "Next, enable gravity sensor support by logging into Fermentrack, clicking the gear in the upper right,"
+  echo "and changing 'Enable gravity support' to 'Yes'."
   echo
   echo " - Fermentrack frontend    : http://${MYIP_TRIM}"
-  echo " - Legacy frontend         : http://${MYIP_TRIM}:81"
-  echo " - Legacy file location    : /var/www/html"
   echo ""
   echo "Happy Brewing!"
   echo ""
@@ -337,10 +345,10 @@ echo
 
 verifyInternetConnection
 verifyInstallerVersion
-getAptPackages
+verifyInstallLocation
 verifyFreeDiskSpace
-deactivateApache
-setupNginx
-
+getAptPackages
+setPythonSetcap
+enableSitePackages
+runFermentrackUpgrade
 installationReport
-

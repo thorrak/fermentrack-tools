@@ -250,11 +250,17 @@ getAptPackages() {
     # build-essential allows for building certain python (& other) packages
     # python-dev, python-pip, and python-virtualenv all enable us to run Python scripts
     # nginx is a webserver
-    # libzmq-dev and libevent-dev are used by rabbitmq-server
-    # rabbitmq-server is used by Celery to manage delayed tasks
+    # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
 
-    apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx libzmq-dev libevent-dev rabbitmq-server avrdude &>> install.log || die
+    apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx redis-server avrdude &>> install.log || die
+
+    # bluez and python-bluez are for bluetooth support (for Tilt)
+    # libcap2-bin is additionally for bluetooth support (for Tilt)
+    # python-scipy and python-numpy are for Tilt configuration support
+
+    apt-get install -y bluez python-bluez python-scipy python-numpy libcap2-bin &>> install.log || die
+
     printinfo "All packages installed successfully."
     echo
 }
@@ -363,9 +369,15 @@ createPythonVenv() {
   # Set up virtualenv directory
   printinfo "Creating virtualenv directory..."
   cd "$installPath"
-  # Supposedly, --no-site-packages is now default behavior - including it nonetheless just in case
-  sudo -u $fermentrackUser virtualenv --no-site-packages "venv"
+  # For specific gravity sensor support, we want --system-site-packages
+  sudo -u $fermentrackUser virtualenv --system-site-packages "venv"
   echo
+}
+
+setPythonSetcap() {
+  printinfo "Enabling python to query bluetooth without being root"
+
+  setcap cap_net_raw+eip "$installPath/venv/bin/python"
 }
 
 
@@ -526,6 +538,7 @@ backupOldInstallation
 fixPermissions
 cloneRepository
 createPythonVenv
+setPythonSetcap
 makeSecretSettings
 runFermentrackUpgrade
 fixInsecureSSH
