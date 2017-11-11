@@ -283,7 +283,7 @@ verifyFreeDiskSpace() {
 setPythonSetcap() {
   printinfo "Enabling python to query bluetooth without being root"
 
-  setcap cap_net_raw+eip /home/fermentrack/venv/bin/python
+  setcap cap_net_raw+eip /home/fermentrack/venv/bin/python2
 }
 
 enableSitePackages() {

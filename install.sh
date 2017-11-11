@@ -377,9 +377,9 @@ createPythonVenv() {
 setPythonSetcap() {
   printinfo "Enabling python to query bluetooth without being root"
 
-  if [ -a "$installPath/venv/bin/python" ]; then
-    setcap cap_net_raw+eip "$installPath/venv/bin/python"
-  fi
+#  if [ -a "$installPath/venv/bin/python" ]; then
+#    setcap cap_net_raw+eip "$installPath/venv/bin/python"
+#  fi
 
   if [ -a "$installPath/venv/bin/python2" ]; then
     setcap cap_net_raw+eip "$installPath/venv/bin/python2"
