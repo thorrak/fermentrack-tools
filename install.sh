@@ -249,11 +249,12 @@ getAptPackages() {
     # git-core enables us to get the code from git (har har)
     # build-essential allows for building certain python (& other) packages
     # python-dev, python-pip, and python-virtualenv all enable us to run Python scripts
+    # python-zmq is used in part by Circus
     # nginx is a webserver
     # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
 
-    apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx redis-server avrdude &>> install.log || die
+    apt-get install -y git-core build-essential python-dev python-virtualenv python-pip python-zmq nginx redis-server avrdude &>> install.log || die
 
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
@@ -311,16 +312,16 @@ createConfigureUser() {
   ### Create/configure user accounts
   printinfo "Creating and configuring user accounts."
 
-  if id -u $fermentrackUser >/dev/null 2>&1; then
-    printinfo "User '$fermentrackUser' already exists, skipping..."
+  if id -u ${fermentrackUser} >/dev/null 2>&1; then
+    printinfo "User '${fermentrackUser}' already exists, skipping..."
   else
-    useradd -m -G dialout $fermentrackUser -s /bin/bash &>> install.log ||die
+    useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
-    passwd -d $fermentrackUser||die
+    passwd -d ${fermentrackUser}||die
   fi
   # add pi user to fermentrack and www-data group
   if id -u pi >/dev/null 2>&1; then
-    usermod -a -G www-data $fermentrackUser||die
+    usermod -a -G www-data ${fermentrackUser}||die
   fi
   echo
 }
@@ -344,8 +345,8 @@ backupOldInstallation() {
 
 
 fixPermissions() {
-  printinfo "Making sure everything is owned by $fermentrackUser"
-  chown -R $fermentrackUser:$fermentrackUser "$installPath"||die
+  printinfo "Making sure everything is owned by ${fermentrackUser}"
+  chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
   # Set sticky bit! nom nom nom
   find "$installPath" -type d -exec chmod g+rwxs {} \;||die
   echo
@@ -357,9 +358,9 @@ cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath"
   if [ "$github_repo" != "master" ]; then
-    sudo -u $fermentrackUser git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
   else
-    sudo -u $fermentrackUser git clone ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} git clone ${github_repo} "$installPath/fermentrack"||die
   fi
   echo
 }
@@ -370,7 +371,7 @@ createPythonVenv() {
   printinfo "Creating virtualenv directory..."
   cd "$installPath"
   # For specific gravity sensor support, we want --system-site-packages
-  sudo -u $fermentrackUser virtualenv --system-site-packages "venv"
+  sudo -u ${fermentrackUser} virtualenv --system-site-packages "venv"
   echo
 }
 
@@ -392,7 +393,7 @@ makeSecretSettings() {
   printinfo "Running make_secretsettings.sh from the script repo"
   if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/make_secretsettings.sh
+    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/make_secretsettings.sh
   else
     printerror "Could not find fermentrack/utils/make_secretsettings.sh!"
     # TODO: decide if this is a fatal error or not
@@ -408,7 +409,7 @@ runFermentrackUpgrade() {
   printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
+    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
   else
     printerror "Could not find fermentrack/utils/upgrade.sh!"
     exit 1
@@ -450,9 +451,9 @@ setupCronCircus() {
   # Install CRON job to launch Circus
   printinfo "Running updateCronCircus.sh from the script repo"
   if [ -f "$installPath"/fermentrack/utils/updateCronCircus.sh ]; then
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
+    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
     printinfo "Starting circus process monitor."
-    sudo -u $fermentrackUser bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
+    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
   else
     # whoops, something is wrong...
     printerror "Could not find updateCronCircus.sh!"
@@ -515,10 +516,10 @@ if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask questions if we're running in n
     printwarn "Any data in the user's home directory may be ERASED during install!"
     echo
     read -p "What user would you like to install BrewPi under? [fermentrack]: " fermentrackUser
-    if [ -z "$fermentrackUser" ]; then
+    if [ -z "${fermentrackUser}" ]; then
       fermentrackUser="fermentrack"
     else
-      case "$fermentrackUser" in
+      case "${fermentrackUser}" in
         y | Y | yes | YES| Yes )
             fermentrackUser="fermentrack";; # accept default when y/yes is answered
         * )
@@ -529,9 +530,9 @@ else  # If we're in non-interactive mode, default the user
     fermentrackUser="fermentrack"
 fi
 
-installPath="/home/$fermentrackUser"
+installPath="/home/${fermentrackUser}"
 scriptversion=$(git log --oneline -n1)
-printinfo "Configuring under user $fermentrackUser"
+printinfo "Configuring under user ${fermentrackUser}"
 printinfo "Configuring in directory $installPath"
 echo
 
@@ -545,6 +546,7 @@ createConfigureUser
 backupOldInstallation
 fixPermissions
 cloneRepository
+fixPermissions
 createPythonVenv
 setPythonSetcap
 makeSecretSettings
