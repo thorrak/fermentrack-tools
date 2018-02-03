@@ -1,6 +1,6 @@
 server {
-    listen 81 default_server;
-    listen [::]:81 default_server ipv6only=on;
+    # listen 81 default_server;
+    listen [::]:81 default_server ipv6only=off;
 
     root /var/www/html;
     index index.php index.html index.htm;

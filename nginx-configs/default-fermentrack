@@ -1,8 +1,8 @@
 # Default server configuration
 # Defaulting default server to Fermentrack
 server {
-	listen 80 default_server;
-	listen [::]:80 default_server;
+	# listen 80 default_server;
+	listen [::]:80 default_server ipv6only=off;
 
     # NOTE - All instances of 'brewpiuser' are replaced with the username collected during installation
 	root /home/brewpiuser/fermentrack;
