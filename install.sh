@@ -358,9 +358,9 @@ cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath"
   if [ "$github_repo" != "master" ]; then
-    sudo -u ${fermentrackUser} git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} -H git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
   else
-    sudo -u ${fermentrackUser} git clone ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} -H git clone ${github_repo} "$installPath/fermentrack"||die
   fi
   echo
 }
@@ -371,7 +371,7 @@ createPythonVenv() {
   printinfo "Creating virtualenv directory..."
   cd "$installPath"
   # For specific gravity sensor support, we want --system-site-packages
-  sudo -u ${fermentrackUser} virtualenv --system-site-packages "venv"
+  sudo -u ${fermentrackUser} -H virtualenv --system-site-packages "venv"
   echo
 }
 
@@ -392,7 +392,7 @@ forcePipReinstallation() {
   # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
   # (I'm looking at you, ubuntu/raspbian...)
   printinfo "Forcing reinstallation of pip within the virtualenv"
-  sudo -u ${fermentrackUser} bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
+  sudo -u ${fermentrackUser} -H bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
 }
 
 # Create secretsettings.py file
@@ -400,7 +400,7 @@ makeSecretSettings() {
   printinfo "Running make_secretsettings.sh from the script repo"
   if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/make_secretsettings.sh
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/make_secretsettings.sh
   else
     printerror "Could not find fermentrack/utils/make_secretsettings.sh!"
     # TODO: decide if this is a fatal error or not
@@ -416,7 +416,7 @@ runFermentrackUpgrade() {
   printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
   else
     printerror "Could not find fermentrack/utils/upgrade.sh!"
     exit 1
@@ -458,9 +458,9 @@ setupCronCircus() {
   # Install CRON job to launch Circus
   printinfo "Running updateCronCircus.sh from the script repo"
   if [ -f "$installPath"/fermentrack/utils/updateCronCircus.sh ]; then
-    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
     printinfo "Starting circus process monitor."
-    sudo -u ${fermentrackUser} bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
   else
     # whoops, something is wrong...
     printerror "Could not find updateCronCircus.sh!"
@@ -563,3 +563,4 @@ fixInsecureSSH
 setupNginx
 setupCronCircus
 installationReport
+sleep 1s
