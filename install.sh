@@ -388,6 +388,13 @@ setPythonSetcap() {
 }
 
 
+forcePipReinstallation() {
+  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
+  # (I'm looking at you, ubuntu/raspbian...)
+  printinfo "Forcing reinstallation of pip within the virtualenv"
+  sudo -u ${fermentrackUser} bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
+}
+
 # Create secretsettings.py file
 makeSecretSettings() {
   printinfo "Running make_secretsettings.sh from the script repo"
@@ -549,10 +556,10 @@ cloneRepository
 fixPermissions
 createPythonVenv
 setPythonSetcap
+forcePipReinstallation
 makeSecretSettings
 runFermentrackUpgrade
 fixInsecureSSH
 setupNginx
 setupCronCircus
 installationReport
-
