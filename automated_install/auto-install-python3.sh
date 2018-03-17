@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-# auto-install-legacy.sh
+# auto-install-python3.sh
 #
-# This script attempts to automatically download fermentrack-tools and use install-legacy-support.sh to install
-# suport for legacy apps (Apps running under Apache, typically using PHP). This includes RaspberryPints and
-# brewpi-www (though running Fermentrack alongside BrewPi-www isn't recommended).
+# This script attempts to update the Fermentrack environment to run under Python 3.
 #
 # It can be run via curl (See install_curl_command below) which enables the user to install everything with one
 # command.
@@ -22,8 +20,8 @@
 # SOFTWARE.
 
 package_name="Fermentrack"
-install_curl_url="install-legacy-support.fermentrack.com"
-install_curl_command="curl -L install-legacy-support.fermentrack.com | sudo bash"
+install_curl_url="install-python3.fermentrack.com"
+install_curl_command="curl -L install-python3.fermentrack.com | sudo bash"
 tools_name="fermentrack-tools"
 tools_repo_url="https://github.com/thorrak/fermentrack-tools.git"
 
@@ -149,17 +147,17 @@ cloneFromGit() {
     echo ":: Repo was cloned successfully."
 }
 launchInstall() {
-    echo "::: This script will now attempt to install ${package_name} using the 'install.sh' script that has been created at"
-    echo -e "::: ${scriptPath}/${tools_name}/install-legacy-support.sh"
+    echo "::: This script will now attempt to install ${package_name} using the install script that has been created at"
+    echo -e "::: ${scriptPath}/${tools_name}/install-gravity-support.sh"
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name}
     # The -n flag makes install-legacy-support.sh non-interactive
-    sudo bash ./install-legacy-support.sh -n
+    sudo bash ./install-python3.sh -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
-    echo -e "::: ${scriptPath}/${tools_name}/install-legacy-support.sh"
+    echo -e "::: ${scriptPath}/${tools_name}/install-python3.sh"
 }
 
 

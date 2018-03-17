@@ -158,7 +158,7 @@ launchInstall() {
     sudo bash ./install-gravity-support.sh -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
-    echo -e "::: ${scriptPath}/${tools_name}/install-legacy-support.sh"
+    echo -e "::: ${scriptPath}/${tools_name}/install-gravity-support.sh"
 }
 
 

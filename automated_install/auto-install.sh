@@ -127,7 +127,7 @@ getAptPackages() {
     # Installing the nginx stack along with everything we need for circus, etc.
     echo "::: apt is updated - installing git-core, build-essential, python-dev, and python-virtualenv."
     echo "::: (This may take a few minutes during which everything will be silent)"
-    sudo apt-get install -y git-core build-essential python-dev python-virtualenv &> /dev/null || die
+    sudo apt-get install -y git-core build-essential &> /dev/null || die
     echo ":: All packages installed successfully."
 }
 

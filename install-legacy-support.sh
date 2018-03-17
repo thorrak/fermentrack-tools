@@ -239,13 +239,7 @@ getAptPackages() {
     # nginx is a webserver
     # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
-    apt-get install -y git-core build-essential python-dev python-virtualenv python-pip nginx redis-server avrdude &>> install.log || die
-
-    # These packages are required for Bluetooth and Tilt configuration support
-    # bluez and python-bluez are for bluetooth support (for Tilt)
-    # libcap2-bin is additionally for bluetooth support (for Tilt)
-    # python-scipy and python-numpy are for Tilt configuration support
-    apt-get install -y redis-server bluez python-bluez python-scipy python-numpy libcap2-bin &>>install.log || die
+    apt-get install -y git-core build-essential nginx &>> install.log || die
 
 
     printinfo "Now installing additional packages required for legacy (PHP/Apache) software support"
