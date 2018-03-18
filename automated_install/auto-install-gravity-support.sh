@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO - Delete this script as it is no longer necessary
+
 # auto-install-gravity-support.sh
 #
 # This script attempts to update the Fermentrack environment to incorporate the changes required to support specific

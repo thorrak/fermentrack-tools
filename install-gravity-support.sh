@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO - Delete this script as it is no longer necessary
+
 # install-gravity-support.sh
 #
 # This script attempts to update the Fermentrack environment to incorporate the changes required to support specific
@@ -248,7 +250,7 @@ getAptPackages() {
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
     # python-scipy and python-numpy are for Tilt configuration support
-    apt-get install -y redis-server bluez python-bluez python-scipy python-numpy libcap2-bin &>>install.log || die
+    apt-get install -y bluez python-bluez python-scipy python-numpy libcap2-bin &>>install.log || die
 
     printinfo "All packages installed successfully."
     echo

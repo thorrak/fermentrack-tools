@@ -169,7 +169,7 @@ getAptPackages() {
     # build-essential allows for building certain python (& other) packages
     # avrdude is used to flash Arduino-based devices
 
-    apt-get install -y git-core build-essential avrdude &>> install.log || die
+    apt-get install -y git-core build-essential redis-server avrdude &>> install.log || die
 
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
