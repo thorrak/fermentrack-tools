@@ -57,3 +57,4 @@ shift $((OPTIND-1))
 # we can easily call it with 'sudo'.
 source ${activate_path}
 pip install -U --force-reinstall pip
+pip install -U pip
