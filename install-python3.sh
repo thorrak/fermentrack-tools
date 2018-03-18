@@ -243,17 +243,25 @@ forcePipReinstallation() {
   sudo -u ${fermentrackUser} -H bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
 }
 
+# Clone Fermentrack repositories
+updateRepo() {
+  printinfo "Downloading most recent Fermentrack codebase..."
+  cd "$installPath"
+    sudo -u ${fermentrackUser} -H sh -c "cd ~/fermentrack ; git fetch ; git pull"||die
+  echo
+}
+
 
 
 # Run the upgrade script within Fermentrack
 runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
   printinfo "This may take up to an hour during which everything will be silent..."
-  if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
+  if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
   else
-    printerror "Could not find fermentrack/utils/upgrade.sh!"
+    printerror "Could not find fermentrack/utils/upgrade3.sh!"
     exit 1
   fi
   echo
@@ -310,7 +318,8 @@ verifyFreeDiskSpace
 removeOldPythonVenv
 createPythonVenv
 setPythonSetcap
-forcePipReinstallation
+#forcePipReinstallation
+updateRepo
 
 runFermentrackUpgrade
 

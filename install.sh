@@ -417,11 +417,11 @@ makeSecretSettings() {
 runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
   printinfo "This may take up to an hour during which everything will be silent..."
-  if [ -a "$installPath"/fermentrack/utils/upgrade.sh ]; then
+  if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
     cd "$installPath"/fermentrack/utils/
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade.sh &>> install.log
+    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
   else
-    printerror "Could not find fermentrack/utils/upgrade.sh!"
+    printerror "Could not find ~/fermentrack/utils/upgrade3.sh!"
     exit 1
   fi
   echo
@@ -429,7 +429,7 @@ runFermentrackUpgrade() {
 
 
 # Check for insecure SSH key
-# TODO: Check if this is still needed, newer versions of rasbian don't have this problem.
+# TODO: Check if this is still needed, newer versions of Raspbian don't have this problem.
 fixInsecureSSH() {
   defaultKey="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLNC9E7YjW0Q9btd9aUoAg++/wa06LtBMc1eGPTdu29t89+4onZk1gPGzDYMagHnuBjgBFr4BsZHtng6uCRw8fIftgWrwXxB6ozhD9TM515U9piGsA6H2zlYTlNW99UXLZVUlQzw+OzALOyqeVxhi/FAJzAI9jPLGLpLITeMv8V580g1oPZskuMbnE+oIogdY2TO9e55BWYvaXcfUFQAjF+C02Oo0BFrnkmaNU8v3qBsfQmldsI60+ZaOSnZ0Hkla3b6AnclTYeSQHx5YqiLIFp0e8A1ACfy9vH0qtqq+MchCwDckWrNxzLApOrfwdF4CSMix5RKt9AF+6HOpuI8ZX root@raspberrypi"
 
@@ -559,7 +559,7 @@ cloneRepository
 fixPermissions
 createPythonVenv
 setPythonSetcap
-forcePipReinstallation
+#forcePipReinstallation
 makeSecretSettings
 runFermentrackUpgrade
 fixInsecureSSH
