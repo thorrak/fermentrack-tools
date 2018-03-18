@@ -339,7 +339,7 @@ welcomeMessage
 # This one should remove color escape codes from log, but it needs some more
 # work so the EOL esc codes also get stripped.
 # exec > >( tee >( sed 's/\x1B\[[0-9;]*[JKmsu]//g' >> install.log ) )
-exec > >(tee -i install.log)
+exec > >(tee -ai install.log)
 exec 2>&1
 
 echo
