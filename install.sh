@@ -375,8 +375,11 @@ createPythonVenv() {
   printinfo "Creating virtualenv directory..."
   cd "$installPath"
   # For specific gravity sensor support, we want --system-site-packages
-  # sudo -u ${fermentrackUser} -H virtualenv --system-site-packages "venv"
-  sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv --system-site-packages
+  # ...but that doesn't work in certain installations of Raspbian. Instead, we'll rig it a bit.
+  # sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv --system-site-packages
+  sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
+  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
+  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
   echo
 }
 
@@ -391,12 +394,12 @@ setPythonSetcap() {
 }
 
 
-forcePipReinstallation() {
-  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
-  # (I'm looking at you, ubuntu/raspbian...)
-  printinfo "Forcing reinstallation of pip within the virtualenv"
-  sudo -u ${fermentrackUser} -H bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
-}
+#forcePipReinstallation() {
+#  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
+#  # (I'm looking at you, ubuntu/raspbian...)
+#  printinfo "Forcing reinstallation of pip within the virtualenv"
+#  sudo -u ${fermentrackUser} -H bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
+#}
 
 # Create secretsettings.py file
 makeSecretSettings() {
