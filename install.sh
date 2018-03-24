@@ -261,7 +261,7 @@ getAptPackages() {
     # libcap2-bin is additionally for bluetooth support (for Tilt)
     # python-scipy and python-numpy are for Tilt configuration support
 
-    apt-get install -y bluez libcap2-bin &>> install.log || die
+    apt-get install -y bluez libcap2-bin libbluetooth3 &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
     apt-get install -y python3-venv python3-dev python3-zmq python3-scipy python3-numpy
