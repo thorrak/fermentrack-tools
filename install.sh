@@ -201,7 +201,7 @@ verifyRunAsRoot() {
 # Check for network connection
 verifyInternetConnection() {
   printinfo "Checking for Internet connection: "
-  ping -c 3 github.com &>> install.log
+  ping -c 3 google.com &>> install.log
   if [ $? -ne 0 ]; then
       echo
       printerror "Could not ping github.com. Are you sure you have a working Internet connection?"
