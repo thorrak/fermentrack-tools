@@ -201,7 +201,7 @@ verifyRunAsRoot() {
 # Check for network connection
 verifyInternetConnection() {
   printinfo "Checking for Internet connection: "
-  wget -q --spider github.com &>> install.log
+  wget -q --spider --no-check-certificate github.com &>> install.log
   if [ $? -ne 0 ]; then
       echo
       printerror "Could not connect to GitHub. Are you sure you have a working Internet"
