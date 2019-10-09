@@ -153,7 +153,6 @@ launchInstall() {
 ### Now, for the main event...
 #######
 verifyRunAsRoot
-exit
 verifyFreeDiskSpace
 getAptPackages
 cloneFromGit
