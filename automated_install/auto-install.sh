@@ -96,10 +96,7 @@ verifyFreeDiskSpace() {
     echo ":: Insufficient Disk Space!"
     echo ":: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
     echo ":: You only have ${existing_free_kilobytes} KB free."
-    echo ":: If this is a new install you may need to expand your disk."
-    echo ":: Try running 'sudo raspi-config', and choose the 'expand file system option'"
-    echo ":: After rebooting, run this installation again. (${install_curl_command})"
-
+    echo ":: After freeing up space, run this installation script again. (${install_curl_command})"
     echo "Insufficient free space, exiting..."
     exit 1
   fi
