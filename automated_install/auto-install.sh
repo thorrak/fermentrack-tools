@@ -52,31 +52,20 @@ die () {
 #######
 verifyRunAsRoot() {
     # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
-    # then it attempts to relaunch itself as root.
-
+    # it prompts the user to relaunch as root.
 
     if [[ ${EUID} -eq 0 ]]; then
         echo "::: This script was launched as root. Continuing installation."
     else
-        echo "::: This script was called without root privileges. It installs and updates several packages, and the"
-        echo "::: script it calls within ${tools_name} creates user accounts and updates  system settings. To"
-        echo "::: continue this script will now attempt to use 'sudo' to relaunch itself as root. Please check"
-        echo "::: the contents of this script (as well as the install script within ${tools_name} for any concerns"
-        echo "::: with this requirement. Please be sure to access this script (and ${tools_name}) from a trusted"
-        echo "::: source."
+        echo "::: This script was called without root privileges, which are required as it installs and updates several"
+        echo "::: packages, and the script it calls within ${tools_name} creates user accounts and updates system"
+        echo "::: settings. To continue, this script must launched using the 'sudo' command to run as root. Please check"
+        echo "::: the contents of this script (as well as the install script within ${tools_name}) for any concerns with"
+        echo "::: this requirement. Please be sure to access this script (and ${tools_name}) from a trusted source."
         echo ":::"
-
-        if command -v sudo &> /dev/null; then
-            # TODO - Make this require user confirmation before continuing
-            echo "::: This script will now attempt to relaunch using sudo."
-            exec curl -L $install_curl_url | sudo bash "$@"
-            exit $?
-        else
-            echo "::: The sudo utility does not appear to be available on this system, and thus installation cannot continue."
-            echo "::: Please run this script as root and it will be automatically installed."
-            echo "::: You should be able to do this by running '${install_curl_command}'"
-            exit 1
-        fi
+        echo "::: To re-run this script with sudo permissions, type:"
+        echo "::: sudo $0"
+        exit 1
     fi
 
 }
@@ -168,4 +157,3 @@ verifyFreeDiskSpace
 getAptPackages
 cloneFromGit
 launchInstall
-
