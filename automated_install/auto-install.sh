@@ -149,6 +149,8 @@ launchInstall() {
 #######
 ### Now, for the main event...
 #######
+echo ""
+echo "<<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>>"
 verifyRunAsRoot
 verifyFreeDiskSpace
 getAptPackages
