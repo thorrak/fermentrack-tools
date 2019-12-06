@@ -45,6 +45,8 @@ The automated installer was inspired by the Pi-Hole project.
 
 ## Legacy Apache (Raspberry Pints, brewpi-www, & Others) App Support
 
+##### Note - this is untested under recent versions of Raspbian. If you do this, please report back with your results!
+
 Unlike RaspberryPints, brewpi-www, and certain other applications, Fermentrack is designed to run using nginx instead of Apache. To support installing these applications alongside Fermentrack a sample nginx configuration file is included which replicates the environment expected by Apache.
 
 Although this method can be used to run both Fermentrack and legacy BrewPi-www on the same Raspberry Pi, this is not recommended as it can result in unexpected behavior on controllers used by both applications.
