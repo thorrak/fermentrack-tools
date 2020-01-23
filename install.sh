@@ -264,7 +264,7 @@ getAptPackages() {
     apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-scipy python3-numpy
+    apt-get install -y python3-venv python3-dev python3-zmq python3-scipy python3-numpy python3-pip
 
     printinfo "All packages installed successfully."
     echo
