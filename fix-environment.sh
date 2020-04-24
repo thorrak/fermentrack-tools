@@ -127,6 +127,60 @@ setPythonSetcap() {
 }
 
 
+installPython() {
+  printinfo "Installing Python 3.7.7"
+  printinfo "Warning - This may take several hours to complete, depending on your Pi version"
+  printinfo "Let it do its thing. This is important."
+  cd ~ || exit
+  sudo apt-get update -y
+  sudo apt-get install build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev  libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
+  sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev
+  wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
+  tar xf Python-3.7.7.tar.xz
+  cd Python-3.7.7 || exit
+  ./configure --enable-optimizations
+  make -j 4
+  sudo make altinstall
+  rm Python-3.7.7.tar.xz
+  sudo apt-get --purge remove build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
+  sudo apt-get autoremove -y
+  sudo apt-get clean
+
+}
+
+createPythonVenv() {
+  # Set up virtualenv directory
+  printinfo "Creating virtualenv directory..."
+  cd "/home/fermentrack" || exit
+  sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
+  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
+  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose"
+  echo
+}
+
+
+checkPython37() {
+  if command -v python3.7 &> /dev/null; then
+    # Python 3.7 is installed. No need to reinstall python manually and nuke the venv
+    printinfo "Python 3.7 is installed. Continuing."
+  else
+    installPython
+    createPythonVenv
+  fi
+
+#  if python --version 2>&1 | grep -q '^Python 3\.7'; then
+    # It's python 3.7
+#    printinfo "Python 3.7 is installed. Continuing."
+#  else
+#    installPython
+#    createPythonVenv
+#  fi
+}
+
+
+
+
 doEverythingRequiringSudo() {
   printinfo "Switching to the Fermentrack user and doing all the other bits..."
 exec sudo -u ${fermentrackUser} -H bash << eof
@@ -167,6 +221,7 @@ eof
 verifyFreeDiskSpace
 verifyInternetConnection
 getAptPackages
+checkPython37
 fixPermissions
 setPythonSetcap
 
