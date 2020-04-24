@@ -207,9 +207,11 @@ python3 manage.py migrate
 python3 manage.py fix_sqlite_for_django_2
 python3 manage.py collectstatic --noinput >> /dev/null
 
-echo "Relaunching circus..."
-circusctl reloadconfig
-circusctl start
+echo "Quitting Circus"
+circusctl quit
+
+echo "Calling updateCronCircus to restart Circus..."
+utils/updateCronCircus.sh startifstopped
 
 echo
 echo "Done! Exiting."
