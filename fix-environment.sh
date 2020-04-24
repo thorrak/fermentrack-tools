@@ -152,6 +152,7 @@ createPythonVenv() {
   # Set up virtualenv directory
   printinfo "Creating virtualenv directory..."
   cd "/home/fermentrack" || exit
+  sudo -u fermentrack -H rm -rf ~/venv/
   sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
   sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
   sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
