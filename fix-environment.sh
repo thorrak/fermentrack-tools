@@ -37,7 +37,11 @@ printerror() {
  printf "${red}*** ERROR: %s${reset}\n" "$@"
 }
 
-
+die () {
+  local st="$?"
+  warn "$@"
+  exit "$st"
+}
 
 
 
@@ -88,19 +92,19 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        apt-key update &>> install.log||die
+        sudo apt-key update &>> install.log||die
         printinfo "'apt-key update' ran successfully."
-        apt-get update &>> install.log||die
+        sudo apt-get update &>> install.log||die
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
     printinfo "apt is updated - Triggering install of all packages."
 
-    apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
+    sudo apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
 
-    apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
+    sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-scipy python3-numpy  &>> install.log || die
+    sudo apt-get install -y python3-venv python3-dev python3-scipy python3-numpy  &>> install.log || die
 
     printinfo "Apt-packages reinstalled successfully."
     echo
