@@ -100,7 +100,7 @@ getAptPackages() {
 
     apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-scipy python3-numpy  &>> install.log || die
+    apt-get install -y python3-venv python3-dev python3-scipy python3-numpy  &>> install.log || die
 
     printinfo "Apt-packages reinstalled successfully."
     echo
@@ -110,9 +110,9 @@ getAptPackages() {
 
 fixPermissions() {
   printinfo "Making sure everything is owned by ${fermentrackUser}"
-  chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
+  sudo chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
   # Set sticky bit! nom nom nom
-  find "$installPath" -type d -exec chmod g+rwxs {} \;||die
+  sudo find "$installPath" -type d -exec chmod g+rwxs {} \;||die
   echo
 }
 
@@ -142,7 +142,7 @@ installPython() {
   make -j 4
   sudo make altinstall
   rm Python-3.7.7.tar.xz
-  sudo apt-get --purge remove build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
+  sudo apt-get --purge remove tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
   sudo apt-get autoremove -y
   sudo apt-get clean
 
@@ -154,30 +154,25 @@ createPythonVenv() {
   cd "/home/fermentrack" || exit
   sudo -u fermentrack -H rm -rf ~/venv/
   sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
-  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
-  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install -vv --no-binary pyzmq pyzmq"
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose"
+#  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
+#  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install --no-binary pyzmq pyzmq==18.1.1"
+  # sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose"
+  # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install circus"
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy pandas"
   echo
 }
 
 
 checkPython37() {
   if command -v python3.7 &> /dev/null; then
-    # Python 3.7 is installed. No need to reinstall python manually and nuke the venv
+    # Python 3.7 is installed. No need to reinstall python manually
     printinfo "Python 3.7 is installed. Continuing."
   else
     installPython
-    createPythonVenv
-  fi
 
-#  if python --version 2>&1 | grep -q '^Python 3\.7'; then
-    # It's python 3.7
-#    printinfo "Python 3.7 is installed. Continuing."
-#  else
-#    installPython
-#    createPythonVenv
-#  fi
+  fi
 }
 
 
@@ -226,6 +221,8 @@ verifyFreeDiskSpace
 verifyInternetConnection
 getAptPackages
 checkPython37
+# We're always going to nuke the venv now
+createPythonVenv
 fixPermissions
 setPythonSetcap
 
