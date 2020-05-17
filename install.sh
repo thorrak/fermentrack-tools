@@ -264,7 +264,9 @@ getAptPackages() {
     apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-scipy python3-numpy python3-pip
+    apt-get install -y python3-venv python3-dev python3-zmq python3-pip
+    # scipy and numpy are now installed from the wheels directly into the venv
+    #apt-get install -y python3-scipy python3-numpy
 
     printinfo "All packages installed successfully."
     echo
@@ -377,9 +379,28 @@ createPythonVenv() {
   # For specific gravity sensor support, we want --system-site-packages
   # ...but that doesn't work in certain installations of Raspbian. Instead, we'll rig it a bit.
   # sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv --system-site-packages
-  sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
-  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
-  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  if command -v python3.7 &> /dev/null; then
+    printinfo "Python 3.7 is installed. Using Python 3.7 to create the venv."
+    sudo -u ${fermentrackUser} -H python3.7 -m venv ${installPath}/venv
+
+    # Fix the symlinks to only point to Python 3.7
+    sudo -u ${fermentrackUser} -H rm ${installPath}/venv/bin/python3
+    sudo -u ${fermentrackUser} -H rm ${installPath}/venv/bin/python
+    sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python
+    sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python3
+  else
+    printinfo "Python 3.7 is NOT installed. Using the generic 'Python 3' to create the venv."
+    sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
+  fi
+
+  # I want to specifically install things in this order to the venv
+  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install circus"
+  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install numpy"
+  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install scipy"
+  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install pandas"
+
+  #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
+  #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
   echo
 }
 
@@ -428,23 +449,6 @@ runFermentrackUpgrade() {
     exit 1
   fi
   echo
-}
-
-
-# Check for insecure SSH key
-# TODO: Check if this is still needed, newer versions of Raspbian don't have this problem.
-fixInsecureSSH() {
-  defaultKey="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLNC9E7YjW0Q9btd9aUoAg++/wa06LtBMc1eGPTdu29t89+4onZk1gPGzDYMagHnuBjgBFr4BsZHtng6uCRw8fIftgWrwXxB6ozhD9TM515U9piGsA6H2zlYTlNW99UXLZVUlQzw+OzALOyqeVxhi/FAJzAI9jPLGLpLITeMv8V580g1oPZskuMbnE+oIogdY2TO9e55BWYvaXcfUFQAjF+C02Oo0BFrnkmaNU8v3qBsfQmldsI60+ZaOSnZ0Hkla3b6AnclTYeSQHx5YqiLIFp0e8A1ACfy9vH0qtqq+MchCwDckWrNxzLApOrfwdF4CSMix5RKt9AF+6HOpuI8ZX root@raspberrypi"
-
-  if grep -q "$defaultKey" /etc/ssh/ssh_host_rsa_key.pub; then
-    printinfo "Replacing default SSH keys. You will need to remove the previous key from known hosts on any clients that have previously connected to this rpi."
-    if rm -f /etc/ssh/ssh_host_* && dpkg-reconfigure openssh-server; then
-      printinfo "Default SSH keys replaced."
-      echo
-    else
-      printwarn "Unable to replace SSH key. You probably want to take the time to do this on your own."
-    fi
-  fi
 }
 
 
@@ -565,7 +569,6 @@ setPythonSetcap
 forcePipReinstallation
 makeSecretSettings
 runFermentrackUpgrade
-fixInsecureSSH
 setupNginx
 fixPermissions
 setupCronCircus

@@ -145,6 +145,38 @@ launchInstall() {
     echo -e "::: ${scriptPath}/${tools_name}/install.sh"
 }
 
+installPython() {
+  printinfo "Installing Python 3.7.7"
+  printinfo "Warning - This may take several hours to complete, depending on your Pi version"
+  printinfo "Let it do its thing. This is important."
+  cd ~ || exit
+  sudo apt-get update -y
+  sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev  libexpat1-dev liblzma-dev zlib1g-dev libffi-dev
+  sudo apt-get install -y make libreadline-dev wget curl llvm xz-utils libxml2-dev libxmlsec1-dev libzmq5-dev
+  wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
+  tar xf Python-3.7.7.tar.xz
+  cd Python-3.7.7 || exit
+  ./configure
+  make -j 4
+  sudo make altinstall
+  cd ..
+  rm Python-3.7.7.tar.xz
+  sudo apt-get --purge remove tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
+  sudo apt-get autoremove -y
+  sudo apt-get clean
+
+}
+
+checkPython37() {
+  if command -v python3.7 &> /dev/null; then
+    # Python 3.7 is installed. No need to reinstall python manually
+    printinfo "Python 3.7 is installed. Continuing."
+  else
+    printinfo "Python 3.7 is NOT installed, but is required for Fermentrack. Installing manually."
+    installPython
+  fi
+}
+
 
 #######
 ### Now, for the main event...
@@ -154,5 +186,6 @@ echo "<<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>>"
 verifyRunAsRoot
 verifyFreeDiskSpace
 getAptPackages
+checkPython37
 cloneFromGit
 launchInstall
