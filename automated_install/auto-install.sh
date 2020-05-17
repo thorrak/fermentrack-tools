@@ -146,9 +146,9 @@ launchInstall() {
 }
 
 installPython() {
-  printinfo "Installing Python 3.7.7"
-  printinfo "Warning - This may take several hours to complete, depending on your Pi version"
-  printinfo "Let it do its thing. This is important."
+  echo "Installing Python 3.7.7"
+  echo -e "Warning - This may take several hours to complete, depending on your Pi version"
+  echo -e "Let it do its thing. This is important."
   cd ~ || exit
   sudo apt-get update -y
   sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev  libexpat1-dev liblzma-dev zlib1g-dev libffi-dev
@@ -170,9 +170,9 @@ installPython() {
 checkPython37() {
   if command -v python3.7 &> /dev/null; then
     # Python 3.7 is installed. No need to reinstall python manually
-    printinfo "Python 3.7 is installed. Continuing."
+    echo "Python 3.7 is installed. Continuing."
   else
-    printinfo "Python 3.7 is NOT installed, but is required for Fermentrack. Installing manually."
+    echo "Python 3.7 is NOT installed, but is required for Fermentrack. Installing manually."
     installPython
   fi
 }
