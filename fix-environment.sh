@@ -142,7 +142,8 @@ installPython() {
   wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
   tar xf Python-3.7.7.tar.xz
   cd Python-3.7.7 || exit
-  ./configure --enable-optimizations
+  #./configure --enable-optimizations
+  ./configure
   make -j 4
   sudo make altinstall
   rm Python-3.7.7.tar.xz
