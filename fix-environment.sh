@@ -158,10 +158,7 @@ createPythonVenv() {
   cd "/home/fermentrack" || exit
   sudo -u fermentrack -H rm -rf ~/venv/
   sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
-#  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
-#  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install --no-binary pyzmq pyzmq==18.1.1"
-  # sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose"
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install --no-binary pyzmq pyzmq==19.0.1"
   # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
   sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install circus"
   sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install numpy scipy pandas"
