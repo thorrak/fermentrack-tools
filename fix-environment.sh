@@ -104,7 +104,7 @@ getAptPackages() {
 
     sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
 
-    sudo apt-get install -y python3-venv python3-dev python3-scipy python3-numpy  &>> install.log || die
+    sudo apt-get install -y python3-venv python3-dev  &>> install.log || die
 
     printinfo "Apt-packages reinstalled successfully."
     echo
@@ -146,6 +146,7 @@ installPython() {
   ./configure
   make -j 4
   sudo make altinstall
+  cd ..
   rm Python-3.7.7.tar.xz
   sudo apt-get --purge remove tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
   sudo apt-get autoremove -y
@@ -159,6 +160,13 @@ createPythonVenv() {
   cd "/home/fermentrack" || exit
   sudo -u fermentrack -H rm -rf ~/venv/
   sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
+
+  # Fix the symlinks to only point to Python 3.7
+  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
+  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python
+  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python
+  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
+
   sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install --no-binary pyzmq pyzmq==19.0.1"
   # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
   sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install circus"
