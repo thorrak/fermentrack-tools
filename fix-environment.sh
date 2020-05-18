@@ -76,9 +76,6 @@ verifyFreeDiskSpace() {
     printerror "Insufficient Disk Space!"
     printerror "Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
     printerror "You only have ${existing_free_kilobytes} KB free."
-    printerror "If this is a new install you may need to expand your disk."
-    printerror "Try running 'sudo raspi-config', and choose the 'expand file system option'"
-    printerror "After rebooting, run this installation again."
     printerror "Insufficient free space, exiting..."
     exit 1
   fi
@@ -105,6 +102,8 @@ getAptPackages() {
     sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
 
     sudo apt-get install -y python3-venv python3-dev  &>> install.log || die
+    # sudo apt-get install -y libatlas-base-dev &>> install.log || die
+    sudo apt-get install -y python3-scipy python3-numpy &>> install.log || die
 
     printinfo "Apt-packages reinstalled successfully."
     echo

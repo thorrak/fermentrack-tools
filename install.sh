@@ -255,7 +255,6 @@ getAptPackages() {
     # avrdude is used to flash Arduino-based devices
 
     apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
-    # apt-get install -y python-dev python-virtualenv python-pip python-zmq &>> install.log || die
 
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
@@ -265,8 +264,9 @@ getAptPackages() {
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
     apt-get install -y python3-venv python3-dev python3-zmq python3-pip
-    # scipy and numpy are now installed from the wheels directly into the venv
-    #apt-get install -y python3-scipy python3-numpy
+    # numpy is now installed from source directly into the venv, but I'd like to switch back to usign the packages when
+    # possible. We should only -have- to install from source when this (call to apt) doesn't work.
+    apt-get install -y python3-scipy python3-numpy
 
     printinfo "All packages installed successfully."
     echo
@@ -288,9 +288,6 @@ verifyFreeDiskSpace() {
     printerror "Insufficient Disk Space!"
     printerror "Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
     printerror "You only have ${existing_free_kilobytes} KB free."
-    printerror "If this is a new install you may need to expand your disk."
-    printerror "Try running 'sudo raspi-config', and choose the 'expand file system option'"
-    printerror "After rebooting, run this installation again."
     printerror "Insufficient free space, exiting..."
     exit 1
   fi
@@ -393,11 +390,17 @@ createPythonVenv() {
     sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
   fi
 
+  # Before we do anything else - update pip
+  sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/pip install --upgrade pip"
+
   # I want to specifically install things in this order to the venv
-  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install circus"
-  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install numpy"
-  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install scipy"
-  sudo -u fermentrack -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install pandas"
+  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1"
+  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install circus"
+
+  # TODO - Check if we can link a python 3.7 package rather than installing from source for some environments
+  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
+#  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1"
+#  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pandas pandas==1.0.1"
 
   #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
   #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
