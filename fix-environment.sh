@@ -39,7 +39,7 @@ printerror() {
 
 die () {
   local st="$?"
-  warn "$@"
+  printwarn "$@"
   exit "$st"
 }
 
