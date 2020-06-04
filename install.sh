@@ -398,12 +398,12 @@ createPythonVenv() {
   sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install circus"
 
   # TODO - Check if we can link a python 3.7 package rather than installing from source for some environments
-  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
+  #sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
 #  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1"
 #  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pandas pandas==1.0.1"
 
-  #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
-  #sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
+  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
   echo
 }
 
