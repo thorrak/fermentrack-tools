@@ -193,6 +193,7 @@ createPythonVenv() {
   sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1"
   # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
   sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install circus"
+  sudo apt-get install -y libatlas-base-dev &>> install.log || die
   sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
   echo
 }

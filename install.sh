@@ -414,20 +414,26 @@ createPythonVenv() {
   forcePipReinstallation
 
   # I want to specifically install things in this order to the venv
+  printinfo "Manually installing PyZMQ and Circus - This could take ~10-15 mins."
+
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
   if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
     # Numpy is available from system packages. Link to the venv
+    printinfo "Numpy and Scipy are available through system packages. Linking to those."
     sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
     sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
   else
     # Numpy is NOT available from system packages. Let's attempt to install manually.
+    printinfo "Numpy and Scipy are not available through system packages. Installing manually."
+    printinfo "NOTE - This could take 4+ hours. This could have been skipped if you installed"
+    printinfo "on a recent version of Raspbian."
+    sudo apt-get install -y libatlas-base-dev &>> install.log || die
     sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
     sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
   fi
-
-#  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pandas pandas==1.0.1"
+  printinfo "Venv has been created!"
 
   echo
 }
