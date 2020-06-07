@@ -164,7 +164,8 @@ checkPython37() {
     echo "Buster or later."
     echo ""
     echo "Although the installation script can manually install Python 3.7, it is *highly*"
-    echo "recommended that you upgrade your version of Raspbian instead."
+    echo "recommended that you upgrade your version of Raspbian instead. Installing on this"
+    echo "version of Raspbian may take several hours longer than an installation on Buster."
     echo ""
 
     read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
