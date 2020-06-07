@@ -129,6 +129,7 @@ handleExistingTools() {
 cloneFromGit() {
     echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
     git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
+    git checkout numpy
     echo ":: Repo was cloned successfully."
 }
 
@@ -169,7 +170,7 @@ checkPython37() {
 
     read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
     case "$yn" in
-      y | Y | yes | YES | Yes ) printinfo "Ok, let's go!";;
+      y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
       * ) exit;;
     esac
 
@@ -183,9 +184,10 @@ launchInstall() {
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
-    cd ${tools_name} || exit 1
+    cd ${tools_name}
     # The -n flag makes install.sh non-interactive
-    sudo bash ./install.sh -n
+    echo "cd to ${tools_name} and then:"
+    echo "Run: sudo bash ./install.sh -n"
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
     echo -e "::: ${scriptPath}/${tools_name}/install.sh"
