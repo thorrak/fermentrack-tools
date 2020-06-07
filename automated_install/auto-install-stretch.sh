@@ -129,6 +129,7 @@ handleExistingTools() {
 cloneFromGit() {
     echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
     git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
+    cd ${scriptPath}/${tools_name} || exit 1
     git checkout numpy
     echo ":: Repo was cloned successfully."
 }

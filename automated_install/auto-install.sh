@@ -167,12 +167,16 @@ checkPython37() {
     echo "recommended that you upgrade your version of Raspbian instead. Installing on this"
     echo "version of Raspbian may take several hours longer than an installation on Buster."
     echo ""
+    echo "To stop installation here, press Ctrl+C. Installation will otherwise continue in 10 seconds."
 
-    read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
-    case "$yn" in
-      y | Y | yes | YES | Yes ) printinfo "Ok, let's go!";;
-      * ) exit;;
-    esac
+    sleep 11s
+
+    # This script is almost always run non-interactively, so we can't solicit feedback here
+#    read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
+#    case "$yn" in
+#      y | Y | yes | YES | Yes ) printinfo "Ok, let's go!";;
+#      * ) exit;;
+#    esac
 
     installPython
   fi

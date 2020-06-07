@@ -263,10 +263,10 @@ getAptPackages() {
     apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-pip
+    apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
     # numpy is now installed from source directly into the venv, but I'd like to switch back to using the packages when
     # possible. We should only -have- to install from source when this (call to apt) doesn't work.
-    apt-get install -y python3-scipy python3-numpy
+    apt-get install -y python3-scipy python3-numpy &>> install.log || die
 
     printinfo "All packages installed successfully."
     echo
@@ -372,14 +372,16 @@ forcePipReinstallation() {
   # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
   # (I'm looking at you, ubuntu/raspbian...)
   printinfo "Forcing reinstallation of pip within the virtualenv"
-  sudo -u ${fermentrackUser} -H bash "${installPath}/venv/bin/pip install -U --force-reinstall pip"
-  sudo -u ${fermentrackUser} -H bash "${installPath}/venv/bin/pip install -U pip"
+  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U --force-reinstall pip
+  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U pip
 }
 
 createPythonVenv() {
   # Set up virtualenv directory
   printinfo "Creating virtualenv directory..."
   cd "$installPath" || exit
+
+  # Our default PYTHON3_INTERPRETER is 'python3'
   PYTHON3_INTERPRETER="python3"
 
   # For specific gravity sensor support, we want --system-site-packages
@@ -408,22 +410,22 @@ createPythonVenv() {
   fi
 
 
-    # Before we do anything else - update pip
-    forcePipReinstallation
+  # Before we do anything else - update pip
+  forcePipReinstallation
 
-    # I want to specifically install things in this order to the venv
-    sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1"
-    sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/python3 -m pip install circus"
+  # I want to specifically install things in this order to the venv
+  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
+  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
-    if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
-      # Numpy is available from system packages. Link to the venv
-      sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
-      sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
-    else
-      # Numpy is NOT available from system packages. Let's attempt to install manually.
-      sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
-      sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1"
-    fi
+  if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
+    # Numpy is available from system packages. Link to the venv
+    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
+    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  else
+    # Numpy is NOT available from system packages. Let's attempt to install manually.
+    sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
+    sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
+  fi
 
 #  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pandas pandas==1.0.1"
 
