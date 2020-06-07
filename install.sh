@@ -429,7 +429,10 @@ createPythonVenv() {
     printinfo "Numpy and Scipy are not available through system packages. Installing manually."
     printinfo "NOTE - This could take 4+ hours. This could have been skipped if you installed"
     printinfo "on a recent version of Raspbian."
+
+    # For manual installs of numpy, we need to have libatlas-base-dev installed
     sudo apt-get install -y libatlas-base-dev &>> install.log || die
+
     sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
     sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
   fi
