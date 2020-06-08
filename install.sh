@@ -585,7 +585,7 @@ echo
 
 
 verifyInternetConnection
-#verifyInstallerVersion
+verifyInstallerVersion
 getAptPackages
 verifyFreeDiskSpace
 verifyInstallPath
