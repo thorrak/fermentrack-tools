@@ -434,7 +434,7 @@ createPythonVenv() {
     sudo apt-get install -y libatlas-base-dev &>> install.log || die
 
     sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
-    sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
+    #sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
   fi
   printinfo "Venv has been created!"
 
