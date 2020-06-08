@@ -63,7 +63,7 @@ verifyInternetConnection() {
 
 verifyFreeDiskSpace() {
   printinfo "Verifying free disk space..."
-  local required_free_kilobytes=256000
+  local required_free_kilobytes=512000
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
@@ -74,7 +74,7 @@ verifyFreeDiskSpace() {
   # - Insufficient free disk space
   elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
     printerror "Insufficient Disk Space!"
-    printerror "Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
+    printerror "Your system appears to be low on disk space. Fermentrack recommends a minimum of $required_free_kilobytes KB."
     printerror "You only have ${existing_free_kilobytes} KB free."
     printerror "Insufficient free space, exiting..."
     exit 1
@@ -150,41 +150,56 @@ installPython() {
   sudo apt-get --purge remove tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
   sudo apt-get autoremove -y
   sudo apt-get clean
-
 }
 
-createPythonVenv() {
-  # Set up virtualenv directory
-  printinfo "Creating virtualenv directory..."
-  cd "/home/fermentrack" || exit
-  sudo -u fermentrack -H rm -rf ~/venv/
-  sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
-
-  # Fix the symlinks to only point to Python 3.7
-  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
-  sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python
-  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python
-  sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
-
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && pip install --no-binary pyzmq pyzmq==19.0.1"
-  # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install circus"
-  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
-  echo
+quitCircus() {
+  cd /home/fermentrack/fermentrack || exit 1
+  echo "Exiting circus before proceeding..."
+  sudo -u fermentrack -H bash -c "source /home/fermentrack/venv/bin/activate && /home/fermentrack/venv/bin/circusctl quit"
 }
-
 
 checkPython37() {
   if command -v python3.7 &> /dev/null; then
     # Python 3.7 is installed. No need to reinstall python manually
-    printinfo "Python 3.7 is installed. Continuing."
+    echo "Python 3.7 is already installed. Continuing."
   else
     installPython
-
   fi
 }
 
+createPythonVenv() {
+  # Set up virtualenv directory
+  printinfo "Deleting old virtualenv directory & creating new one..."
+  cd "/home/fermentrack" || exit
+  sudo -u fermentrack -H rm -rf /home/fermentrack/venv/
 
+  if command -v python3.7 &> /dev/null; then
+    # Python 3.7 is installed. Expressly set up using Python 3.7.
+    echo "Setting up venv with Python 3.7"
+    sudo -u fermentrack -H python3.7 -m venv /home/fermentrack/venv
+
+    # Fix the symlinks to only point to Python 3.7
+    sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python3
+    sudo -u fermentrack -H rm /home/fermentrack/venv/bin/python
+    sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python
+    sudo -u fermentrack -H ln -s /home/fermentrack/venv/bin/python3.7 /home/fermentrack/venv/bin/python3
+  else
+      # This really shouldn't happen, unless this script gets reused without being completely rewritten.
+      # (I'm looking at you, myself-in-a-year)
+      echo "Setting up venv with generic Python 3"
+      sudo -u fermentrack -H python3 -m venv /home/fermentrack/venv
+  fi
+
+  sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1"
+  # I explicitly want to install Circus first, as there are potential clashes with versioning on pyzmq
+  sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install circus"
+
+  # For manual installs of numpy, we need to have libatlas-base-dev installed
+  sudo apt-get install -y libatlas-base-dev &>> install.log || die
+
+  sudo -u fermentrack -H bash -c "/home/fermentrack/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
+  echo
+}
 
 
 doEverythingRequiringSudo() {
@@ -193,11 +208,6 @@ exec sudo -u ${fermentrackUser} -H bash << eof
 source ~/venv/bin/activate
 cd ~/fermentrack
 
-echo "Stopping Circus"
-circusctl stop
-
-echo "Upgrading pip"
-pip3 install --upgrade pip
 
 echo "Fetching, resetting, and pulling from git..."
 git fetch --all
@@ -205,17 +215,14 @@ git reset --hard
 git pull
 
 echo "Re-installing Python packages from requirements.txt via pip3"
-pip3 install --force-reinstall --no-cache-dir -U -r requirements.txt --upgrade
+pip3 install --no-cache-dir -U -r requirements.txt --upgrade
 
 echo "Running manage.py migrate/fix_sqlite_for_django_2/collectstatic..."
 python3 manage.py migrate
 python3 manage.py fix_sqlite_for_django_2
 python3 manage.py collectstatic --noinput >> /dev/null
 
-echo "Quitting Circus"
-circusctl quit
-
-echo "Calling updateCronCircus to restart Circus..."
+echo "Calling updateCronCircus.sh to restart Circus..."
 utils/updateCronCircus.sh startifstopped
 
 echo
@@ -229,6 +236,7 @@ eof
 verifyFreeDiskSpace
 verifyInternetConnection
 getAptPackages
+quitCircus
 checkPython37
 # We're always going to nuke the venv now
 createPythonVenv

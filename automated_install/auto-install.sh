@@ -131,19 +131,6 @@ cloneFromGit() {
     git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
     echo ":: Repo was cloned successfully."
 }
-launchInstall() {
-    echo "::: This script will now attempt to install ${package_name} using the 'install.sh' script that has been created at"
-    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
-    echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
-    echo -e "::: "
-    echo -e "::: Launching ${package_name} installer."
-    cd ${tools_name}
-    # The -n flag makes install.sh non-interactive
-    sudo bash ./install.sh -n
-    echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
-    echo -e "::: relaunch the installation script which has been downloaded at:"
-    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
-}
 
 installPython() {
   echo "Installing Python 3.7.7"
@@ -172,11 +159,42 @@ checkPython37() {
     # Python 3.7 is installed. No need to reinstall python manually
     echo "Python 3.7 is installed. Continuing."
   else
-    echo "Python 3.7 is NOT installed, but is required for Fermentrack. Installing manually."
+    echo "Python 3.7 is NOT installed, but is required for Fermentrack. This generally means"
+    echo "that you are running an older version of Raspbian. Fermentrack recommends Raspbian"
+    echo "Buster or later."
+    echo ""
+    echo "Although the installation script can manually install Python 3.7, it is *highly*"
+    echo "recommended that you upgrade your version of Raspbian instead. Installing on this"
+    echo "version of Raspbian may take several hours longer than an installation on Buster."
+    echo ""
+    echo "To stop installation here, press Ctrl+C. Installation will otherwise continue in 10 seconds."
+
+    sleep 11s
+
+    # This script is almost always run non-interactively, so we can't solicit feedback here
+#    read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
+#    case "$yn" in
+#      y | Y | yes | YES | Yes ) printinfo "Ok, let's go!";;
+#      * ) exit;;
+#    esac
+
     installPython
   fi
 }
 
+launchInstall() {
+    echo "::: This script will now attempt to install ${package_name} using the 'install.sh' script that has been created at"
+    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
+    echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
+    echo -e "::: "
+    echo -e "::: Launching ${package_name} installer."
+    cd ${tools_name} || exit 1
+    # The -n flag makes install.sh non-interactive
+    sudo bash ./install.sh -n
+    echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
+    echo -e "::: relaunch the installation script which has been downloaded at:"
+    echo -e "::: ${scriptPath}/${tools_name}/install.sh"
+}
 
 #######
 ### Now, for the main event...

@@ -218,9 +218,9 @@ verifyInstallerVersion() {
   printinfo "Checking whether this script is up to date..."
   unset CDPATH
   myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
-  printinfo ""$myPath"/update-tools-repo.sh start."
+  #printinfo "$myPath/update-tools-repo.sh start."
   bash "$myPath"/update-tools-repo.sh &>> install.log
-  printinfo ""$myPath"/update-tools-repo.sh end."
+  #printinfo "$myPath/update-tools-repo.sh end."
   if [ $? -ne 0 ]; then
     printerror "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
     exit 1
@@ -263,10 +263,10 @@ getAptPackages() {
     apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-pip
-    # numpy is now installed from source directly into the venv, but I'd like to switch back to usign the packages when
+    apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
+    # numpy is now installed from source directly into the venv, but I'd like to switch back to using the packages when
     # possible. We should only -have- to install from source when this (call to apt) doesn't work.
-    apt-get install -y python3-scipy python3-numpy
+    apt-get install -y python3-scipy python3-numpy &>> install.log || die
 
     printinfo "All packages installed successfully."
     echo
@@ -359,7 +359,7 @@ fixPermissions() {
 # Clone Fermentrack repositories
 cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
-  cd "$installPath"
+  cd "$installPath" || exit
   if [ "$github_repo" != "master" ]; then
     sudo -u ${fermentrackUser} -H git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
   else
@@ -368,16 +368,30 @@ cloneRepository() {
   echo
 }
 
+forcePipReinstallation() {
+  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
+  # (I'm looking at you, ubuntu/raspbian...)
+  printinfo "Forcing reinstallation of pip within the virtualenv"
+  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U --force-reinstall pip
+  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U pip
+}
 
 createPythonVenv() {
   # Set up virtualenv directory
   printinfo "Creating virtualenv directory..."
-  cd "$installPath"
+  cd "$installPath" || exit
+
+  # Our default PYTHON3_INTERPRETER is 'python3'
+  PYTHON3_INTERPRETER="python3"
+
   # For specific gravity sensor support, we want --system-site-packages
   # ...but that doesn't work in certain installations of Raspbian. Instead, we'll rig it a bit.
   # sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv --system-site-packages
   if command -v python3.7 &> /dev/null; then
     printinfo "Python 3.7 is installed. Using Python 3.7 to create the venv."
+    # Note for the future - This check is imperfect at best. We're attempting to preserve Stretch support by explicitly
+    # calling for Python 3.7, even though later versions of Raspbian may have later versions of Python. This check will
+    # explicitly force the use/linkage of Python 3.7 binaries when available but *shouldn't* fail with higher versions.
     sudo -u ${fermentrackUser} -H python3.7 -m venv ${installPath}/venv
 
     # Fix the symlinks to only point to Python 3.7
@@ -385,25 +399,45 @@ createPythonVenv() {
     sudo -u ${fermentrackUser} -H rm ${installPath}/venv/bin/python
     sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python
     sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python3
+
+    # Setting PYTHON3_INTERPRETER here allows us to explicitly test if numpy is available in python 3.7
+    PYTHON3_INTERPRETER="python3.7"
   else
+    # We presumably either have a user that skipped all the warnings on Stretch, or have later versions of Python
+    # available. Let's just proceed for now. Eventually this check should get rewritten.
     printinfo "Python 3.7 is NOT installed. Using the generic 'Python 3' to create the venv."
     sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
   fi
 
+
   # Before we do anything else - update pip
-  sudo -u ${fermentrackUser} -H bash -c "$installPath/venv/bin/pip install --upgrade pip"
+  forcePipReinstallation
 
   # I want to specifically install things in this order to the venv
-  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1"
-  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install circus"
+  printinfo "Manually installing PyZMQ and Circus - This could take ~10-15 mins."
 
-  # TODO - Check if we can link a python 3.7 package rather than installing from source for some environments
-  #sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4"
-#  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1"
-#  sudo -u ${fermentrackUser} -H bash -c "source $installPath/venv/bin/activate && $installPath/venv/bin/python3 -m pip install --no-binary pandas pandas==1.0.1"
+  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
+  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
-  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
-  sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
+    # Numpy is available from system packages. Link to the venv
+    printinfo "Numpy and Scipy are available through system packages. Linking to those."
+    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
+    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  else
+    # Numpy is NOT available from system packages. Let's attempt to install manually.
+    printinfo "Numpy and Scipy are not available through system packages. Installing manually."
+    printinfo "NOTE - This could take 4+ hours. This could have been skipped if you installed"
+    printinfo "on a recent version of Raspbian."
+
+    # For manual installs of numpy, we need to have libatlas-base-dev installed
+    sudo apt-get install -y libatlas-base-dev &>> install.log || die
+
+    sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
+    #sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
+  fi
+  printinfo "Venv has been created!"
+
   echo
 }
 
@@ -418,18 +452,11 @@ setPythonSetcap() {
 }
 
 
-forcePipReinstallation() {
-  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
-  # (I'm looking at you, ubuntu/raspbian...)
-  printinfo "Forcing reinstallation of pip within the virtualenv"
-  sudo -u ${fermentrackUser} -H bash "$myPath"/force-pip-install.sh -p "${installPath}/venv/bin/activate"
-}
-
 # Create secretsettings.py file
 makeSecretSettings() {
   printinfo "Running make_secretsettings.sh from the script repo"
   if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
-    cd "$installPath"/fermentrack/utils/
+    cd "$installPath"/fermentrack/utils/ || exit
     sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/make_secretsettings.sh
   else
     printerror "Could not find fermentrack/utils/make_secretsettings.sh!"
@@ -445,7 +472,7 @@ runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
   printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
-    cd "$installPath"/fermentrack/utils/
+    cd "$installPath"/fermentrack/utils/ || exit
     sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
   else
     printerror "Could not find ~/fermentrack/utils/upgrade3.sh!"
@@ -569,7 +596,6 @@ cloneRepository
 fixPermissions
 createPythonVenv
 setPythonSetcap
-forcePipReinstallation
 makeSecretSettings
 runFermentrackUpgrade
 setupNginx
