@@ -446,7 +446,7 @@ setPythonSetcap() {
 
   PYTHON3_INTERPRETER="$(readlink -e $installPath/venv/bin/python)"
   if [ -a ${PYTHON3_INTERPRETER} ]; then
-    sudo setcap cap_net_raw+eip "$PYTHON3_INTERPRETER"
+    sudo setcap cap_net_raw,cap_net_admin+eip "$PYTHON3_INTERPRETER"
   fi
 
 }
