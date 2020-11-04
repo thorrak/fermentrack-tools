@@ -512,7 +512,8 @@ setupCronCircus() {
 
 installationReport() {
 #  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
-  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
+#  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
+  MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
   echo "Done installing Fermentrack!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
