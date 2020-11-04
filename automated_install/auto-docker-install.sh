@@ -74,7 +74,7 @@ verifyRunAsRoot() {
         echo "::: this requirement. Please be sure to access this script (and ${tools_name}) from a trusted source."
         echo ":::"
         echo "::: To re-run this script with sudo permissions, type:"
-        echo "::: sudo $0"
+        echo "::: $install_curl_command"
         exit 1
     fi
 
@@ -139,8 +139,10 @@ cloneFromGit() {
     echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
     git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
     # TODO - remove this when everything is merged into master
+    cd ${tools_name} || die "Unable to cd to $tools_name"
     git checkout docker
     git pull
+    cd ..
     echo ":: Repo was cloned successfully."
 }
 
@@ -151,7 +153,7 @@ launchInstall() {
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
-    cd ${tools_name} || exit 1
+    cd ${tools_name} || die "Unable to launch ${install_script_name}!"
     # The -n flag makes the install script non-interactive
     sudo bash ./$install_script_name -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
@@ -168,6 +170,5 @@ exit_if_pi_zero
 verifyRunAsRoot
 verifyFreeDiskSpace
 getAptPackages
-checkPython37
 cloneFromGit
 launchInstall

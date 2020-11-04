@@ -65,7 +65,7 @@ verifyRunAsRoot() {
         echo "::: this requirement. Please be sure to access this script (and ${tools_name}) from a trusted source."
         echo ":::"
         echo "::: To re-run this script with sudo permissions, type:"
-        echo "::: sudo $0"
+        echo "::: sudo $install_curl_command"
         exit 1
     fi
 
