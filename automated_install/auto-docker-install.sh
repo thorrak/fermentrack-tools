@@ -20,7 +20,7 @@
 
 package_name="Fermentrack"
 install_curl_url="install.fermentrack.com"
-install_script_name="install.sh"
+install_script_name="install-docker.sh"
 install_curl_command="curl -L $install_curl_url | sudo bash"
 tools_name="fermentrack-tools"
 tools_repo_url="https://github.com/thorrak/fermentrack-tools.git"
@@ -51,6 +51,15 @@ die () {
 #######
 #### Compatibility checks & tests
 #######
+exit_if_pi_zero() {
+  # Pi Zero string (armv6l)
+  # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
+  if uname -a | grep -q 'armv6l'; then
+    # I tried supporting armv6l pis, but they're too slow (or otherwise don't work)
+    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running Fermentrack. Exiting."
+  fi
+}
+
 verifyRunAsRoot() {
     # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
     # it prompts the user to relaunch as root.
@@ -73,7 +82,7 @@ verifyRunAsRoot() {
 
 verifyFreeDiskSpace() {
   echo "::: Verifying free disk space..."
-  local required_free_kilobytes=512000
+  local required_free_kilobytes=768000
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
@@ -103,15 +112,14 @@ getAptPackages() {
     lastUpdate=$(stat -c %Y /var/lib/apt/lists)
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
-        echo "::: Last 'apt-get update' was awhile back. Updating now."
-        sudo apt-get update &> /dev/null||die
-        echo ":: 'apt-get update' ran successfully."
+      echo "::: Last 'apt-get update' was awhile back. Updating now."
+      sudo apt-key update &> /dev/null||die
+      echo "::: 'apt-key update' ran successfully."
+      sudo apt-get update &> /dev/null||die
+      echo ":: 'apt-get update' ran successfully."
     fi
 
-    sudo apt-key update &> /dev/null||die
-    echo "::: 'apt-key update' ran successfully."
 
-    # Installing the nginx stack along with everything we need for circus, etc.
     echo "::: apt is updated - installing git-core and build-essential."
     echo "::: (This may take a few minutes during which everything will be silent)"
     sudo apt-get install -y git-core build-essential &> /dev/null || die
@@ -130,58 +138,12 @@ handleExistingTools() {
 cloneFromGit() {
     echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
     git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
+    # TODO - remove this when everything is merged into master
+    git checkout docker
+    git pull
     echo ":: Repo was cloned successfully."
 }
 
-installPython() {
-  echo "Installing Python 3.7.7"
-  echo -e "Warning - This may take several hours to complete, depending on your Pi version"
-  echo -e "Let it do its thing. This is important."
-  cd ~ || exit
-  sudo apt-get update -y
-  sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev  libexpat1-dev liblzma-dev zlib1g-dev libffi-dev
-  sudo apt-get install -y make libreadline-dev wget curl llvm xz-utils libxml2-dev libxmlsec1-dev libzmq5-dev
-  wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
-  tar xf Python-3.7.7.tar.xz
-  cd Python-3.7.7 || exit
-  ./configure
-  make -j 4
-  sudo make altinstall
-  cd ..
-  rm Python-3.7.7.tar.xz
-  sudo apt-get --purge remove tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev -y
-  sudo apt-get autoremove -y
-  sudo apt-get clean
-
-}
-
-checkPython37() {
-  if command -v python3.7 &> /dev/null; then
-    # Python 3.7 is installed. No need to reinstall python manually
-    echo "Python 3.7 is installed. Continuing."
-  else
-    echo "Python 3.7 is NOT installed, but is required for Fermentrack. This generally means"
-    echo "that you are running an older version of Raspbian. Fermentrack recommends Raspbian"
-    echo "Buster or later."
-    echo ""
-    echo "Although the installation script can manually install Python 3.7, it is *highly*"
-    echo "recommended that you upgrade your version of Raspbian instead. Installing on this"
-    echo "version of Raspbian may take several hours longer than an installation on Buster."
-    echo ""
-    echo "To stop installation here, press Ctrl+C. Installation will otherwise continue in 10 seconds."
-
-    sleep 11s
-
-    # This script is almost always run non-interactively, so we can't solicit feedback here
-#    read -p "Do you want to manually install Python 3.7 and continue installing Fermentrack? [y/N] " yn
-#    case "$yn" in
-#      y | Y | yes | YES | Yes ) printinfo "Ok, let's go!";;
-#      * ) exit;;
-#    esac
-
-    installPython
-  fi
-}
 
 launchInstall() {
     echo "::: This script will now attempt to install ${package_name} using the script that has been created at"
@@ -202,6 +164,7 @@ launchInstall() {
 #######
 echo ""
 echo "<<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>>"
+exit_if_pi_zero
 verifyRunAsRoot
 verifyFreeDiskSpace
 getAptPackages
