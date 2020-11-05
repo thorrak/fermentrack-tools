@@ -210,7 +210,7 @@ find_ip_address() {
         FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c Fermentrack)
         if [ $FT_COUNT == "1" ] ; then
           echo "found!"
-          return $IP_ADDRESS
+          return
         fi
       fi
     done
@@ -231,12 +231,11 @@ installationReport() {
   # find_ip_address either finds a non-docker IP address that responds with "Fermentrack" in the text when accessed
   # via curl, or it dies. The return value is a string containing the IP.
   find_ip_address
-  MYIP=$?
 
   if [[ $PORT != "80" ]]; then
-    URL="http://${MYIP}:${PORT}"
+    URL="http://${IP_ADDRESS}:${PORT}"
   else
-    URL="http://${MYIP}"
+    URL="http://${IP_ADDRESS}"
   fi
 
   echo
