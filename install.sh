@@ -49,6 +49,7 @@
 
 
 package_name="Fermentrack"
+PORT="80"
 github_repo="https://github.com/thorrak/fermentrack.git"
 github_branch="master"
 green=$(tput setaf 76)
@@ -510,19 +511,55 @@ setupCronCircus() {
 }
 
 
+find_ip_address() {
+  IP_ADDRESSES=($(hostname -I 2>/dev/null))
+  echo "Waiting for Fermentrack install to initialize and become responsive."
+  echo "Fermentrack may take up to 5 minutes to first boot as the database is being initialized."
+
+  for i in {1..180}; do
+    for IP_ADDRESS in "${IP_ADDRESSES[@]}"
+    do
+      if [[ $IP_ADDRESS != "172."* ]]; then
+        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c Fermentrack)
+        if [ $FT_COUNT == "1" ] ; then
+          echo "found!"
+          return
+        fi
+      fi
+    done
+    echo -n "."
+    sleep 2
+  done
+
+  # If we hit this, we didn't find a valid IP address that responded with "Fermentrack" when accessed.
+  echo "missing."
+  die "Unable to find an initialized, responsive instance of Fermentrack"
+}
+
+
 installationReport() {
 #  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
 #  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
   MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
+
+  find_ip_address
+
+  if [[ $PORT != "80" ]]; then
+    URL="http://${IP_ADDRESS}:${PORT}"
+  else
+    URL="http://${IP_ADDRESS}"
+  fi
+
+
   echo "Done installing Fermentrack!"
   echo "====================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
   echo
   echo "The fermentrack user has been set up with no password. Use 'sudo -u ${fermentrackUser} -i'"
   echo "from this user to access the fermentrack user"
-  echo "To view Fermentrack, enter http://${MYIP} into your web browser"
+  echo "To view Fermentrack, enter ${URL} into your web browser"
   echo
-  echo " - Fermentrack frontend    : http://${MYIP}"
+  echo " - Fermentrack frontend    : ${URL}"
   echo " - Fermentrack user        : ${fermentrackUser}"
   echo " - Installation path       : ${installPath}/fermentrack"
   echo " - Fermentrack version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
