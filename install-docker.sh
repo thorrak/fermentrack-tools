@@ -15,6 +15,8 @@ tan=$(tput setaf 3)
 reset=$(tput sgr0)
 myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
+PORT="80"
+
 
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
@@ -196,17 +198,54 @@ rebuild_fermentrack_containers() {
 }
 
 
+find_ip_address() {
+  IP_ADDRESSES=($(hostname -I 2>/dev/null))
+  echo "Waiting for Fermentrack install to initialize and become responsive."
+  echo "Fermentrack may take up to 5 minutes to first boot as the database is being initialized."
+
+  for i in {1..180}; do
+    for IP_ADDRESS in "${IP_ADDRESSES[@]}"
+    do
+      if [[ $IP_ADDRESS != "172."* ]]; then
+        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c Fermentrack)
+        if [ $FT_COUNT == "1" ] ; then
+          echo "found!"
+          return $IP_ADDRESS
+        fi
+      fi
+    done
+    echo -n "."
+  done
+
+  # If we hit this, we didn't find a valid IP address that responded with "Fermentrack" when accessed.
+  echo "missing."
+  die "Unable to find an initialized, responsive instance of Fermentrack"
+}
+
+
 installationReport() {
 #  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
 #  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
-  MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
+#  MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
+  # find_ip_address either finds a non-docker IP address that responds with "Fermentrack" in the text when accessed
+  # via curl, or it dies. The return value is a string containing the IP.
+  find_ip_address
+  MYIP=$?
+
+  if [[ $PORT != "80" ]]; then
+    URL="http://${MYIP}:${PORT}"
+  else
+    URL="http://${MYIP}"
+  fi
+
+  echo
+  echo
   echo "Done installing Fermentrack!"
   echo "================================================================================================="
   echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
-  echo "Fermentrack may take up to 5 minutes to first boot as the database is being initialized."
   echo
   echo "Fermentrack has been installed into a Docker container along with all its prerequisites."
-  echo "To view Fermentrack, enter http://${MYIP} into your web browser."
+  echo "To view Fermentrack, enter ${URL} into your web browser."
   echo
   echo "Note - Fermentrack relies on the fermentrack_tools directory to run. Please back up the following"
   echo "       two files to ensure that you do not lose data if you need to reinstall Fermentrack:"
@@ -214,7 +253,7 @@ installationReport() {
   echo " - Fermentrack Variables     : ./envs/django"
   echo " - Postgres Variables        : ./envs/postgres"
   echo
-  echo " - Fermentrack Address       : http://${MYIP}"
+  echo " - Fermentrack Address       : ${URL}"
   echo ""
   echo "Happy Brewing!"
   echo ""
