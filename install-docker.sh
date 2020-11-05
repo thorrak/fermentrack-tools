@@ -56,7 +56,7 @@ verifyInternetConnection() {
 # Check disk space
 verifyFreeDiskSpace() {
   printinfo "Verifying free disk space..."
-  local required_free_kilobytes=512000
+  local required_free_kilobytes=1024000
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
