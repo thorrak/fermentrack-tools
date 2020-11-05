@@ -215,6 +215,7 @@ find_ip_address() {
       fi
     done
     echo -n "."
+    sleep 2
   done
 
   # If we hit this, we didn't find a valid IP address that responded with "Fermentrack" when accessed.
