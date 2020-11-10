@@ -302,7 +302,7 @@ backupOldInstallation() {
       mkdir -p ./fermentrack-backup/"$dirName"
       sudo cp -R "$installPath" ./fermentrack-backup/"$dirName"/||die
       sudo rm -rf "$installPath"/*||die
-      sudo find "$installPath"/ -name '.*' | xargs rm -rf||die
+      #sudo find "$installPath"/ -name '.*' | xargs rm -rf||die
   fi
   echo
 }
