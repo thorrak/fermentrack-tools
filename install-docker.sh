@@ -152,10 +152,6 @@ docker_compose_down() {
 check_for_web_service_port() {
   # Allow the user to set the default port for the web service.
 
-  # Before we continue, call docker_compose_down just in case there is an existing stack that is occupying the ports
-  # we need.
-  docker_compose_down
-
   # TODO - Don't show this if the user selected the port as a command line argument
   if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask questions if we're running in noninteractive mode
     printinfo "The default port for ${PACKAGE_NAME} to run on is port 80 (which is standard"
@@ -316,11 +312,15 @@ setup_postgres_env() {
   fi
 }
 
-rewrite_nginx() {
+set_web_services_port() {
   # Rewrite the nginx config file (necessary since we're now using net=host)
   if [ -f "./compose/production/nginx/nginx.conf" ]; then
     sed -i "s+:80+:${PORT}+g" ./compose/production/nginx/nginx.conf
   fi
+
+  # Update the port mapping in production.yml (ignored if we're using net=host)
+  sed -i  "s+80:80+${PORT}:80" production.yml
+
 }
 
 
@@ -373,14 +373,16 @@ installationReport() {
   echo
   echo
   printinfo "Done installing ${PACKAGE_NAME}!"
-  echo "================================================================================================="
-  echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
+  echo "================================================================================="
+  echo "Review the log above for any errors, otherwise, your initial environment install"
+  echo "is complete!"
   echo
-  echo "${PACKAGE_NAME} has been installed into a Docker container along with all its prerequisites."
-  echo "To view ${PACKAGE_NAME}, enter ${URL} into your web browser."
+  echo "${PACKAGE_NAME} has been installed into a Docker container. To view ${PACKAGE_NAME}"
+  echo "enter ${URL} into your web browser."
   echo
-  echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please back up the following"
-  echo "       two files to ensure that you do not lose data if you need to reinstall ${PACKAGE_NAME}:"
+  echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please "
+  echo "       back up the following two files to ensure that you do not lose data if you"
+  echo "       need to reinstall ${PACKAGE_NAME}:"
   echo
   echo " - ${PACKAGE_NAME} Variables     : ./envs/django"
   echo " - Postgres Variables        : ./envs/postgres"
@@ -401,6 +403,6 @@ install_docker
 get_files_from_main_repo
 setup_django_env
 setup_postgres_env
-rewrite_nginx
+set_web_services_port
 rebuild_containers
 installationReport
