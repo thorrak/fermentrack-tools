@@ -161,16 +161,16 @@ check_for_web_service_port() {
     printinfo "The default port for ${PACKAGE_NAME} to run on is port 80 (which is standard"
     printinfo "for most websites). If you have another service currently running on port 80"
     printinfo "then this install will likely fail unless another port is selected."
-    printwarn ""
     echo
-    read -p "What user would you like to install ${PACKAGE_NAME} under? [${PORT}]: " PORT
-    if [ -z "${PORT}" ]; then
+    read -p "What user would you like to install ${PACKAGE_NAME} under? [${PORT}]: " PORT_SEL
+    if [ -z "${PORT_SEL}" ]; then
       PORT="${PORT}"
     else
-      case "${PORT}" in
+      case "${PORT_SEL}" in
         y | Y | yes | YES| Yes )
             PORT="${PORT}";; # accept default when y/yes is answered
         * )
+            PORT="${PORT_SEL}"
             ;;
       esac
     fi
