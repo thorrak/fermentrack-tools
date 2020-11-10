@@ -141,7 +141,7 @@ cloneFromGit() {
       git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die "Unable to clone from GitHub"
       # TODO - remove this when everything is merged into master
       cd ${tools_name} || die "Unable to cd to $tools_name"
-      git checkout docker &> /dev/null
+      git checkout nosudo &> /dev/null
       git pull &> /dev/null
       cd ..
       echo "::: Repo was cloned successfully."

@@ -18,6 +18,48 @@ myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 PORT="80"
 
 
+
+# Help text
+function usage() {
+    echo "Usage: $0 [-h] [-n] [-p <port_number>] [-b <branch>]" 1>&2
+    echo "Options:"
+    echo "  -h                This help"
+    echo "  -n                Run non interactive installation"
+    echo "  -p <port_number>  Specify fermentrack repository (only for development)"
+    echo "  -b <branch>       Branch used (only for development or testing)"
+    exit 1
+}
+
+while getopts "nhp:b:" opt; do
+  case ${opt} in
+    n)
+      INTERACTIVE=0  # Silent/Non-interactive Mode
+      ;;
+    p)
+      PORT=$OPTARG
+      ;;
+    b)
+      github_branch=$OPTARG
+      ;;
+    h)
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
 }
@@ -38,6 +80,15 @@ die () {
   exit "$st"
 }
 
+exit_if_pi_zero() {
+  # Pi Zero string (armv6l)
+  # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
+  if uname -a | grep -q 'armv6l'; then
+    # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
+    # decide to revisit in the future.
+    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running Fermentrack. Exiting."
+  fi
+}
 
 # Check for network connection
 verifyInternetConnection() {
@@ -55,24 +106,24 @@ verifyInternetConnection() {
 
 # Check disk space
 verifyFreeDiskSpace() {
-  printinfo "Verifying free disk space..."
-  local required_free_kilobytes=1024000
+  echo "::: Verifying free disk space..."
+  local required_free_gigabytes=2
+  local required_free_kilobytes=$(( required_free_gigabytes*1024000 ))
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
   if ! [[ "${existing_free_kilobytes}" =~ ^([0-9])+$ ]]; then
-    printerror "Unknown free disk space!"
-    printerror "We were unable to determine available free disk space on this system."
+    echo ":: Unknown free disk space!"
+    echo ":: We were unable to determine available free disk space on this system."
     exit 1
   # - Insufficient free disk space
   elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
-    printerror "Insufficient Disk Space!"
-    printerror "Your system appears to be low on disk space. Fermentrack recommends a minimum of $required_free_kilobytes KB."
-    printerror "You only have ${existing_free_kilobytes} KB free."
-    printerror "Insufficient free space, exiting..."
+    echo ":: Insufficient Disk Space!"
+    echo ":: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_gigabytes GB."
+    echo ":: After freeing up space, run this installation script again. (${install_curl_command})"
+    echo "Insufficient free space, exiting..."
     exit 1
   fi
-  echo
 }
 
 updateApt() {
@@ -80,9 +131,7 @@ updateApt() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        apt-key update &>> install.log||die
-        printinfo "'apt-key update' ran successfully."
-        apt-get update &>> install.log||die
+        sudo apt-get update &>> install.log||die
         printinfo "'apt-get update' ran successfully."
     fi
 }
@@ -90,7 +139,7 @@ updateApt() {
 
 install_docker() {
   # Install Git (and anything else we must have on the base system)
-  sudo apt-get install git subversion -y
+  sudo apt-get install git-core subversion -y
   # Install docker prerequisites
   sudo apt-get install apt-transport-https ca-certificates software-properties-common -y
   # Install docker
@@ -104,9 +153,10 @@ install_docker() {
   sudo apt-get install docker-compose -y
   # Add pi to the docker group (for future interaction /w docker)
   if [ "$USER" == "root" ]; then
-    # Assume pi (the script is being run as root)
-    sudo usermod -aG docker pi
+    printinfo "Script is run as root - no need to add to docker group."
+    # sudo usermod -aG docker pi
   else
+    printinfo "Adding ${USER} to the 'docker' group"
     sudo usermod -aG docker "$USER"
   fi
   # Start the docker service
@@ -179,22 +229,9 @@ setup_postgres_env() {
 }
 
 
-exit_if_pi_zero() {
-  # Pi Zero string (armv6l)
-  # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
-  if uname -a | grep -q 'armv6l'; then
-    # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
-    # decide to revisit in the future.
-    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running Fermentrack. Exiting."
-  fi
-}
-
-
 rebuild_fermentrack_containers() {
   printinfo "Downloading, building, and starting Fermentrack containers"
-  sudo docker-compose -f production.yml down
-  sudo docker-compose -f production.yml build
-  sudo docker-compose -f production.yml up -d
+  ./update-docker.sh
 }
 
 
