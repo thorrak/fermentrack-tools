@@ -131,8 +131,8 @@ get_files_from_main_repo() {
   # TODO - Revert this once the files are merged to master (or alternatively dev)
 #  svn export https://github.com/thorrak/fermentrack/trunk/compose
 #  svn export https://github.com/thorrak/fermentrack/trunk/production.yml
-  svn export https://github.com/thorrak/fermentrack/branches/docker/compose
-  svn export https://github.com/thorrak/fermentrack/branches/docker/production.yml
+  svn export https://github.com/thorrak/fermentrack/branches/docker_hostnet/compose
+  svn export https://github.com/thorrak/fermentrack/branches/docker_hostnet/production.yml
 
   # Last, rewrite production.yml
   if [ -f "./production.yml" ]; then
