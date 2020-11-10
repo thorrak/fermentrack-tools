@@ -296,13 +296,13 @@ backupOldInstallation() {
   dirName=$(date +%F-%k:%M:%S)
   if [ "$(ls -A ${installPath})" ]; then
     printinfo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
-      if [ ! -d ~/fermentrack-backup ]; then
-        sudo mkdir -p ~/fermentrack-backup
+      if [ ! -d ./fermentrack-backup ]; then
+        mkdir -p ./fermentrack-backup
       fi
-      sudo mkdir -p ~/fermentrack-backup/"$dirName"
-      sudo cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
+      mkdir -p ./fermentrack-backup/"$dirName"
+      sudo cp -R "$installPath" ./fermentrack-backup/"$dirName"/||die
       sudo rm -rf "$installPath"/*||die
-      sudo  find "$installPath"/ -name '.*' | xargs rm -rf||die
+      sudo find "$installPath"/ -name '.*' | xargs rm -rf||die
   fi
   echo
 }
