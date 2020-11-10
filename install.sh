@@ -378,9 +378,10 @@ createPythonVenv() {
   printinfo "Manually installing PyZMQ and Circus - This could take ~10-15 mins."
 
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
+  # TODO - version lock the below to match requirements.txt - circus>=0.16.0,<0.17.0
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
-  if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
+  if sudo -u ${fermentrackUser} $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
     # Numpy is available from system packages. Link to the venv
     printinfo "Numpy and Scipy are available through system packages. Linking to those."
     sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
@@ -433,7 +434,7 @@ runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
   printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
-    cd "$installPath"/fermentrack/utils/ || exit
+    #cd "$installPath"/fermentrack/utils/ || exit
     sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
   else
     printerror "Could not find ~/fermentrack/utils/upgrade3.sh!"
