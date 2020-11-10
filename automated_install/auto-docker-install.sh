@@ -65,24 +65,25 @@ verifyRunAsRoot() {
     # it prompts the user to relaunch as root.
 
     if [[ ${EUID} -eq 0 ]]; then
-        echo "::: This script was launched as root. Continuing installation."
+        echo "::: This script was launched as root. Although this used to be the recommended installation method,"
+        echo "::: installs now recommend being launched under the standard user (generally 'pi' for Raspberry Pi"
+        echo "::: installations). If you wish to cancel this installation and relaunch as a different user, press"
+        echo "::: Ctrl+C now. If you wish to continue to install as 'root' wait 10 seconds and the script will"
+        echo "::: continue."
+        sleep 10s
     else
-        echo "::: This script was called without root privileges, which are required as it installs and updates several"
-        echo "::: packages, and the script it calls within ${tools_name} creates user accounts and updates system"
-        echo "::: settings. To continue, this script must launched using the 'sudo' command to run as root. Please check"
-        echo "::: the contents of this script (as well as the install script within ${tools_name}) for any concerns with"
-        echo "::: this requirement. Please be sure to access this script (and ${tools_name}) from a trusted source."
+        echo "::: This script was called without root privileges, which is recommended. The script will, however,"
+        echo "::: need root privileges periodically in order to install certain packages. Please be ready to"
+        echo "::: enter your password if prompted to allow installation to continue."
         echo ":::"
-        echo "::: To re-run this script with sudo permissions, type:"
-        echo "::: $install_curl_command"
-        exit 1
     fi
 
 }
 
 verifyFreeDiskSpace() {
   echo "::: Verifying free disk space..."
-  local required_free_kilobytes=768000
+  local required_free_gigabytes=2
+  local required_free_kilobytes=$(( required_free_gigabytes*1024000 ))
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
@@ -93,8 +94,7 @@ verifyFreeDiskSpace() {
   # - Insufficient free disk space
   elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
     echo ":: Insufficient Disk Space!"
-    echo ":: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
-    echo ":: You only have ${existing_free_kilobytes} KB free."
+    echo ":: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_gigabytes GB."
     echo ":: After freeing up space, run this installation script again. (${install_curl_command})"
     echo "Insufficient free space, exiting..."
     exit 1
@@ -106,56 +106,60 @@ verifyFreeDiskSpace() {
 #######
 
 # getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
-# (git-core, build-essential, python-dev, python-virtualenv). The rest can be installed by fermentrack-tools/install.sh
+# (git-core and build-essential). The rest can be installed by fermentrack-tools/install.sh
 getAptPackages() {
-    echo -e "::: Installing dependencies using apt-get"
+    echo -e ":: Installing dependencies using apt-get"
     lastUpdate=$(stat -c %Y /var/lib/apt/lists)
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
       echo "::: Last 'apt-get update' was awhile back. Updating now."
-      sudo apt-key update &> /dev/null||die
-      echo "::: 'apt-key update' ran successfully."
       sudo apt-get update &> /dev/null||die
-      echo ":: 'apt-get update' ran successfully."
+      echo ":::: 'apt-get update' ran successfully."
+    fi
+
+    echo "::: installing git-core and build-essential."
+    echo "::: (This may take a few minutes during which everything will be silent)"
+    sudo apt-get install -y git-core build-essential &> /dev/null || die
+    echo "::: All packages installed successfully."
+}
+
+
+cloneFromGit() {
+    echo -e ":: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
+
+    if [ -f "./${tools_name}/$install_script_name" ]; then
+      echo -e "::: Existing instance of ${tools_name} found at ${scriptPath}/${tools_name}"
+      echo -e "::: Pulling from Git rather than re-cloning"
+      cd ${tools_name} || die "Unable to cd to $tools_name"
+      git fetch &> /dev/null
+      # TODO - Strip out the next line when all this is merged into master
+      git checkout nosudo &> /dev/null
+      git pull &> /dev/null
+      cd ..
+      echo -e "::: Pull from Git was successful"
+    else
+      git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die "Unable to clone from GitHub"
+      # TODO - remove this when everything is merged into master
+      cd ${tools_name} || die "Unable to cd to $tools_name"
+      git checkout docker &> /dev/null
+      git pull &> /dev/null
+      cd ..
+      echo "::: Repo was cloned successfully."
     fi
 
 
-    echo "::: apt is updated - installing git-core and build-essential."
-    echo "::: (This may take a few minutes during which everything will be silent)"
-    sudo apt-get install -y git-core build-essential &> /dev/null || die
-    echo ":: All packages installed successfully."
-}
-
-handleExistingTools() {
-  echo -e ":::: Existing instance of ${tools_name} found at ${scriptPath}/${tools_name}"
-  echo -e ":::: Moving to ${scriptPath}/${tools_name}.old/"
-  rm -r ${tools_name}.old &> /dev/null
-  mv ${tools_name} ${tools_name}.old||die
-  echo -e ":::: Moved successfully. Reattempting clone."
-  git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die
-}
-
-cloneFromGit() {
-    echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
-    git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
-    # TODO - remove this when everything is merged into master
-    cd ${tools_name} || die "Unable to cd to $tools_name"
-    git checkout docker
-    git pull
-    cd ..
-    echo ":: Repo was cloned successfully."
 }
 
 
 launchInstall() {
-    echo "::: This script will now attempt to install ${package_name} using the script that has been created at"
+    echo ":: This script will now attempt to install ${package_name} using the script that has been created at"
     echo -e "::: ${scriptPath}/${tools_name}/${install_script_name}"
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name} || die "Unable to launch ${install_script_name}!"
     # The -n flag makes the install script non-interactive
-    sudo bash ./$install_script_name -n
+    bash ./$install_script_name -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
     echo -e "::: ${scriptPath}/${tools_name}/${install_script_name}"
@@ -166,6 +170,7 @@ launchInstall() {
 #######
 echo ""
 echo "<<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>><<>>"
+
 exit_if_pi_zero
 verifyRunAsRoot
 verifyFreeDiskSpace
