@@ -64,6 +64,8 @@ verifyRunAsRoot() {
     # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
     # it prompts the user to relaunch as root.
 
+  echo ":: Checking user"
+
     if [[ ${EUID} -eq 0 ]]; then
         echo "::: This script was launched as root. Although this used to be the recommended installation method,"
         echo "::: installs now recommend being launched under the standard user (generally 'pi' for Raspberry Pi"
@@ -81,24 +83,26 @@ verifyRunAsRoot() {
 }
 
 verifyFreeDiskSpace() {
-  echo "::: Verifying free disk space..."
+  echo ":: Verifying free disk space..."
   local required_free_gigabytes=2
   local required_free_kilobytes=$(( required_free_gigabytes*1024000 ))
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
   if ! [[ "${existing_free_kilobytes}" =~ ^([0-9])+$ ]]; then
-    echo ":: Unknown free disk space!"
-    echo ":: We were unable to determine available free disk space on this system."
+    echo "::: Unknown free disk space!"
+    echo ":::: We were unable to determine available free disk space on this system."
     exit 1
   # - Insufficient free disk space
   elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
-    echo ":: Insufficient Disk Space!"
-    echo ":: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_gigabytes GB."
-    echo ":: After freeing up space, run this installation script again. (${install_curl_command})"
+    echo "::: Insufficient Disk Space!"
+    echo ":::: Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_gigabytes GB."
+    echo ":::: After freeing up space, run this installation script again. (${install_curl_command})"
     echo "Insufficient free space, exiting..."
     exit 1
   fi
+
+  echo "::: Sufficent free space for installation"
 }
 
 #######
@@ -106,7 +110,7 @@ verifyFreeDiskSpace() {
 #######
 
 # getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
-# (git-core and build-essential). The rest can be installed by fermentrack-tools/install.sh
+# (git and build-essential). The rest can be installed by fermentrack-tools/install.sh
 getAptPackages() {
     echo -e ":: Installing dependencies using apt-get"
     lastUpdate=$(stat -c %Y /var/lib/apt/lists)
@@ -117,10 +121,10 @@ getAptPackages() {
       echo ":::: 'apt-get update' ran successfully."
     fi
 
-    echo "::: installing git-core and build-essential."
+    echo "::: installing git and build-essential."
     echo "::: (This may take a few minutes during which everything will be silent)"
-    sudo apt-get install -y git-core build-essential &> /dev/null || die
-    echo "::: All packages installed successfully."
+    sudo apt-get install -y git build-essential &> /dev/null || die
+    echo ":::: All packages installed successfully."
 }
 
 
@@ -136,7 +140,7 @@ cloneFromGit() {
       git checkout nosudo &> /dev/null
       git pull &> /dev/null
       cd ..
-      echo -e "::: Pull from Git was successful"
+      echo -e ":::: Pull from Git was successful"
     else
       git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die "Unable to clone from GitHub"
       # TODO - remove this when everything is merged into master
@@ -152,11 +156,11 @@ cloneFromGit() {
 
 
 launchInstall() {
-    echo ":: This script will now attempt to install ${package_name} using the script that has been created at"
+    echo -e ":: This script will now attempt to install ${package_name} using the script that has been created at"
     echo -e "::: ${scriptPath}/${tools_name}/${install_script_name}"
     echo -e "::: If the install script does not complete successfully, please relaunch the script above directly."
     echo -e "::: "
-    echo -e "::: Launching ${package_name} installer."
+    echo -e ":::: Launching ${package_name} installer."
     cd ${tools_name} || die "Unable to launch ${install_script_name}!"
     # The -n flag makes the install script non-interactive
     bash ./$install_script_name -n

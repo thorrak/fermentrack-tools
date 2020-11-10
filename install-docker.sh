@@ -139,7 +139,7 @@ updateApt() {
 
 install_docker() {
   # Install Git (and anything else we must have on the base system)
-  sudo apt-get install git-core subversion -y
+  sudo apt-get install git subversion -y
   # Install docker prerequisites
   sudo apt-get install apt-transport-https ca-certificates software-properties-common -y
   # Install docker
@@ -181,10 +181,10 @@ get_files_from_main_repo() {
   # TODO - Revert this once the files are merged to master (or alternatively dev)
 #  svn export https://github.com/thorrak/fermentrack/trunk/compose
 #  svn export https://github.com/thorrak/fermentrack/trunk/production.yml
-  svn export https://github.com/thorrak/fermentrack/branches/docker_hostnet/compose
-  svn export https://github.com/thorrak/fermentrack/branches/docker_hostnet/production.yml
+  svn export https://github.com/thorrak/fermentrack/branches/docker/compose
+  svn export https://github.com/thorrak/fermentrack/branches/docker/production.yml
 
-  # Last, rewrite production.yml
+  # Rewrite production.yml
   if [ -f "./production.yml" ]; then
     sed -i  "s+./.envs/.production/.django+./envs/django+g" production.yml
     sed -i  "s+./.envs/.production/.postgres+./envs/postgres+g" production.yml
@@ -193,6 +193,12 @@ get_files_from_main_repo() {
   else
     die "Unable to download production.yml from GitHub"
   fi
+
+  # Rewrite the nginx config file (necessary since we're now using net=host)
+  if [ -f "./compose/production/nginx/nginx.conf" ]; then
+    sed -i "s+:80+:${PORT}+g" ./compose/production/nginx/nginx.conf
+  fi
+
 }
 
 setup_django_env() {
