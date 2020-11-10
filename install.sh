@@ -174,33 +174,6 @@ EOF
 }
 
 
-verifyRunAsRoot() {
-    # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
-    # then it attempts to relaunch itself as root.
-    if [[ ${EUID} -eq 0 ]]; then
-        printinfo "This script was launched as root. Continuing installation."
-    else
-        printinfo "This script was called without root privileges. It installs and updates several packages,"
-        printinfo "creates user accounts and updates system settings. To continue this script will now attempt"
-        printinfo "to use 'sudo' to relaunch itself as root. Please check the contents of this script for any"
-        printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
-        echo
-
-        if command -v sudo &> /dev/null; then
-            # TODO - Make this require user confirmation before continuing
-            printinfo "This script will now attempt to relaunch using sudo."
-            exec sudo bash "$0" "$@"
-            exit $?
-        else
-            printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
-            printerror "Please run this script as root and it will be automatically installed."
-            exit 1
-        fi
-    fi
-    echo
-
-}
-
 
 # Check for network connection
 verifyInternetConnection() {
@@ -556,7 +529,6 @@ installationReport() {
 
 ## ------------------- Script "main" starts here -----------------------
 # Create install log file
-verifyRunAsRoot
 welcomeMessage
 
 # This one should remove color escape codes from log, but it needs some more
