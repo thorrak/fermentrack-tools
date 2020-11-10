@@ -107,16 +107,19 @@ shift $((OPTIND-1))
 
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
+  printf "::: ${green}%s${reset}\n" "$@" >> ./install.log
 }
 
 
 printwarn() {
  printf "${tan}*** WARNING: %s${reset}\n" "$@"
+ printf "${tan}*** WARNING: %s${reset}\n" "$@" >> ./install.log
 }
 
 
 printerror() {
  printf "${red}*** ERROR: %s${reset}\n" "$@"
+ printf "${red}*** ERROR: %s${reset}\n" "$@" >> ./install.log
 }
 
 
@@ -214,20 +217,6 @@ verifyInternetConnection() {
 }
 
 
-# Check if installer is up-to-date
-verifyInstallerVersion() {
-  printinfo "Checking whether this script is up to date..."
-  unset CDPATH
-  myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
-  #printinfo "$myPath/update-tools-repo.sh start."
-  bash "$myPath"/update-tools-repo.sh &>> install.log
-  #printinfo "$myPath/update-tools-repo.sh end."
-  if [ $? -ne 0 ]; then
-    printerror "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
-    exit 1
-  fi
-  echo
-}
 
 
 # getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
@@ -237,9 +226,7 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        apt-key update &>> install.log||die
-        printinfo "'apt-key update' ran successfully."
-        apt-get update &>> install.log||die
+        sudo apt-get update &>> install.log||die
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
@@ -255,19 +242,19 @@ getAptPackages() {
     # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
 
-    apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
+    sudo apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
 
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
     # python-scipy and python-numpy are for Tilt configuration support
 
-    apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
+    sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
+    sudo apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
     # numpy is now installed from source directly into the venv, but I'd like to switch back to using the packages when
     # possible. We should only -have- to install from source when this (call to apt) doesn't work.
-    apt-get install -y python3-scipy python3-numpy &>> install.log || die
+    sudo apt-get install -y python3-scipy python3-numpy &>> install.log || die
 
     printinfo "All packages installed successfully."
     echo
@@ -319,13 +306,13 @@ createConfigureUser() {
   if id -u ${fermentrackUser} >/dev/null 2>&1; then
     printinfo "User '${fermentrackUser}' already exists, skipping..."
   else
-    useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
+    sudo useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
-    passwd -d ${fermentrackUser}||die
+    sudo passwd -d ${fermentrackUser}||die
   fi
   # add pi user to fermentrack and www-data group
   if id -u pi >/dev/null 2>&1; then
-    usermod -a -G www-data ${fermentrackUser}||die
+    sudo usermod -a -G www-data ${fermentrackUser}||die
   fi
   echo
 }
@@ -350,9 +337,9 @@ backupOldInstallation() {
 
 fixPermissions() {
   printinfo "Making sure everything is owned by ${fermentrackUser}"
-  chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
+  sudo chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
   # Set sticky bit! nom nom nom
-  find "$installPath" -type d -exec chmod g+rwxs {} \;||die
+  sudo find "$installPath" -type d -exec chmod g+rwxs {} \;||die
   echo
 }
 
@@ -488,10 +475,10 @@ setupNginx() {
   printinfo "Copying nginx configuration to /etc/nginx and activating."
   rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
   # Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
-  sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
-  rm -f /etc/nginx/sites-enabled/default &> /dev/null
-  ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
-  service nginx restart
+  sudo sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack | sudo tee /etc/nginx/sites-available/default-fermentrack
+  sudo rm -f /etc/nginx/sites-enabled/default &> /dev/null
+  sudo ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
+  sudo service nginx restart
 }
 
 
@@ -538,10 +525,6 @@ find_ip_address() {
 
 
 installationReport() {
-#  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
-#  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
-  MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
-
   find_ip_address
 
   if [[ $PORT != "80" ]]; then
@@ -623,7 +606,6 @@ echo
 
 
 verifyInternetConnection
-verifyInstallerVersion
 getAptPackages
 verifyFreeDiskSpace
 verifyInstallPath
