@@ -164,7 +164,7 @@ launchInstall() {
     cd ${tools_name} || die "Unable to launch ${install_script_name}!"
     # The -n flag makes the install script non-interactive
     #bash ./$install_script_name -n
-    bash ./$install_script_name
+    ./$install_script_name
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
     echo -e "::: ${scriptPath}/${tools_name}/${install_script_name}"
