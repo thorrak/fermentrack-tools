@@ -200,6 +200,7 @@ launchInstall() {
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name} || exit 1
+    cd non_docker_install
     # The -n flag makes the install script non-interactive
     # TODO - strip out the -b docker
     sudo bash ./$install_script_name -n -b docker
