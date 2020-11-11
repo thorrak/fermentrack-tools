@@ -107,19 +107,16 @@ shift $((OPTIND-1))
 
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
-  printf "::: ${green}%s${reset}\n" "$@" >> ./install.log
 }
 
 
 printwarn() {
  printf "${tan}*** WARNING: %s${reset}\n" "$@"
- printf "${tan}*** WARNING: %s${reset}\n" "$@" >> ./install.log
 }
 
 
 printerror() {
  printf "${red}*** ERROR: %s${reset}\n" "$@"
- printf "${red}*** ERROR: %s${reset}\n" "$@" >> ./install.log
 }
 
 
@@ -173,6 +170,33 @@ EOF
   fi
 }
 
+
+verifyRunAsRoot() {
+    # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
+    # then it attempts to relaunch itself as root.
+    if [[ ${EUID} -eq 0 ]]; then
+        printinfo "This script was launched as root. Continuing installation."
+    else
+        printinfo "This script was called without root privileges. It installs and updates several packages,"
+        printinfo "creates user accounts and updates system settings. To continue this script will now attempt"
+        printinfo "to use 'sudo' to relaunch itself as root. Please check the contents of this script for any"
+        printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
+        echo
+
+        if command -v sudo &> /dev/null; then
+            # TODO - Make this require user confirmation before continuing
+            printinfo "This script will now attempt to relaunch using sudo."
+            exec sudo bash "$0" "$@"
+            exit $?
+        else
+            printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
+            printerror "Please run this script as root and it will be automatically installed."
+            exit 1
+        fi
+    fi
+    echo
+
+}
 
 
 # Check for network connection
@@ -296,13 +320,13 @@ backupOldInstallation() {
   dirName=$(date +%F-%k:%M:%S)
   if [ "$(ls -A ${installPath})" ]; then
     printinfo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
-      if [ ! -d ./fermentrack-backup ]; then
-        mkdir -p ./fermentrack-backup
+      if [ ! -d ~/fermentrack-backup ]; then
+        mkdir -p ~/fermentrack-backup
       fi
-      mkdir -p ./fermentrack-backup/"$dirName"
-      sudo cp -R "$installPath" ./fermentrack-backup/"$dirName"/||die
-      sudo rm -rf "$installPath"/*||die
-      #sudo find "$installPath"/ -name '.*' | xargs rm -rf||die
+      mkdir -p ~/fermentrack-backup/"$dirName"
+      cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
+      rm -rf "$installPath"/*||die
+      find "$installPath"/ -name '.*' | xargs rm -rf||die
   fi
   echo
 }
@@ -310,9 +334,9 @@ backupOldInstallation() {
 
 fixPermissions() {
   printinfo "Making sure everything is owned by ${fermentrackUser}"
-  sudo chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
+  chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
   # Set sticky bit! nom nom nom
-  sudo find "$installPath" -type d -exec chmod g+rwxs {} \;||die
+  find "$installPath" -type d -exec chmod g+rwxs {} \;||die
   echo
 }
 
@@ -381,7 +405,7 @@ createPythonVenv() {
   # TODO - version lock the below to match requirements.txt - circus>=0.16.0,<0.17.0
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
-  if sudo -u ${fermentrackUser} $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
+  if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
     # Numpy is available from system packages. Link to the venv
     printinfo "Numpy and Scipy are available through system packages. Linking to those."
     sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
@@ -434,7 +458,7 @@ runFermentrackUpgrade() {
   printinfo "Running upgrade.sh from the script repo to finalize the install."
   printinfo "This may take up to an hour during which everything will be silent..."
   if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
-    #cd "$installPath"/fermentrack/utils/ || exit
+    cd "$installPath"/fermentrack/utils/ || exit
     sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
   else
     printerror "Could not find ~/fermentrack/utils/upgrade3.sh!"
@@ -449,10 +473,10 @@ setupNginx() {
   printinfo "Copying nginx configuration to /etc/nginx and activating."
   rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
   # Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
-  sudo sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack | sudo tee /etc/nginx/sites-available/default-fermentrack
-  sudo rm -f /etc/nginx/sites-enabled/default &> /dev/null
-  sudo ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
-  sudo service nginx restart
+  sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
+  rm -f /etc/nginx/sites-enabled/default &> /dev/null
+  ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
+  service nginx restart
 }
 
 
@@ -530,6 +554,7 @@ installationReport() {
 
 ## ------------------- Script "main" starts here -----------------------
 # Create install log file
+verifyRunAsRoot
 welcomeMessage
 
 # This one should remove color escape codes from log, but it needs some more
