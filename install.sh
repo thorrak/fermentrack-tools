@@ -335,7 +335,7 @@ cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath" || exit
   if [ "$github_repo" != "master" ]; then
-    sudo -u ${fermentrackUser} -H git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} -H git clone -b "${github_branch}" ${github_repo} "$installPath/fermentrack"||die
   else
     sudo -u ${fermentrackUser} -H git clone ${github_repo} "$installPath/fermentrack"||die
   fi

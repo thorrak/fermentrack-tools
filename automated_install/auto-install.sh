@@ -125,12 +125,22 @@ handleExistingTools() {
   mv ${tools_name} ${tools_name}.old||die
   echo -e ":::: Moved successfully. Reattempting clone."
   git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die
+  # TODO - remove this when everything is merged into master
+  cd ${tools_name} || die "Unable to cd to $tools_name"
+  git checkout docker &> /dev/null
+  git pull &> /dev/null
+  cd ..
 }
 
 cloneFromGit() {
-    echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
-    git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
-    echo ":: Repo was cloned successfully."
+  echo -e "::: Cloning ${tools_name} repo from GitHub into ${scriptPath}/${tools_name}"
+  git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||handleExistingTools
+  # TODO - remove this when everything is merged into master
+  cd ${tools_name} || die "Unable to cd to $tools_name"
+  git checkout docker &> /dev/null
+  git pull &> /dev/null
+  cd ..
+  echo ":: Repo was cloned successfully."
 }
 
 installPython() {
@@ -191,7 +201,8 @@ launchInstall() {
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name} || exit 1
     # The -n flag makes the install script non-interactive
-    sudo bash ./$install_script_name -n
+    # TODO - strip out the -b docker
+    sudo bash ./$install_script_name -n -b docker
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
     echo -e "::: relaunch the installation script which has been downloaded at:"
     echo -e "::: ${scriptPath}/${tools_name}/${install_script_name}"
