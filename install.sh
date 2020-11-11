@@ -178,23 +178,12 @@ verifyRunAsRoot() {
         printinfo "This script was launched as root. Continuing installation."
     else
         printinfo "This script was called without root privileges. It installs and updates several packages,"
-        printinfo "creates user accounts and updates system settings. To continue this script will now attempt"
-        printinfo "to use 'sudo' to relaunch itself as root. Please check the contents of this script for any"
+        printinfo "creates user accounts, and updates system settings. To continue this script will exit now"
+        printinfo "and must be relaunched by you using sudo. Please check the contents of this script for any"
         printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
         echo
-
-        if command -v sudo &> /dev/null; then
-            # TODO - Make this require user confirmation before continuing
-            printinfo "This script will now attempt to relaunch using sudo."
-            exec sudo bash "$0" "$@"
-            exit $?
-        else
-            printerror "The sudo utility does not appear to be available on this system, and thus installation cannot continue."
-            printerror "Please run this script as root and it will be automatically installed."
-            exit 1
-        fi
+        die "Script must be relaunched using sudo "
     fi
-    echo
 
 }
 
@@ -214,20 +203,6 @@ verifyInternetConnection() {
 }
 
 
-# Check if installer is up-to-date
-verifyInstallerVersion() {
-  printinfo "Checking whether this script is up to date..."
-  unset CDPATH
-  myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
-  #printinfo "$myPath/update-tools-repo.sh start."
-  bash "$myPath"/update-tools-repo.sh &>> install.log
-  #printinfo "$myPath/update-tools-repo.sh end."
-  if [ $? -ne 0 ]; then
-    printerror "The update script was not up-to-date, but it should have been updated. Please re-run install.sh."
-    exit 1
-  fi
-  echo
-}
 
 
 # getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
@@ -237,9 +212,7 @@ getAptPackages() {
     nowTime=$(date +%s)
     if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
         printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        apt-key update &>> install.log||die
-        printinfo "'apt-key update' ran successfully."
-        apt-get update &>> install.log||die
+        sudo apt-get update &>> install.log||die
         printinfo "'apt-get update' ran successfully."
     fi
     # Installing the nginx stack along with everything we need for circus, etc.
@@ -255,19 +228,19 @@ getAptPackages() {
     # redis-server is a key/value store used for gravity sensor & task queue support
     # avrdude is used to flash Arduino-based devices
 
-    apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
+    sudo apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
 
     # bluez and python-bluez are for bluetooth support (for Tilt)
     # libcap2-bin is additionally for bluetooth support (for Tilt)
     # python-scipy and python-numpy are for Tilt configuration support
 
-    apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
+    sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
     # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
 
-    apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
+    sudo apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
     # numpy is now installed from source directly into the venv, but I'd like to switch back to using the packages when
     # possible. We should only -have- to install from source when this (call to apt) doesn't work.
-    apt-get install -y python3-scipy python3-numpy &>> install.log || die
+    sudo apt-get install -y python3-scipy python3-numpy &>> install.log || die
 
     printinfo "All packages installed successfully."
     echo
@@ -319,13 +292,13 @@ createConfigureUser() {
   if id -u ${fermentrackUser} >/dev/null 2>&1; then
     printinfo "User '${fermentrackUser}' already exists, skipping..."
   else
-    useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
+    sudo useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
     # Disable direct login for this user to prevent hijacking if password isn't changed
-    passwd -d ${fermentrackUser}||die
+    sudo passwd -d ${fermentrackUser}||die
   fi
   # add pi user to fermentrack and www-data group
   if id -u pi >/dev/null 2>&1; then
-    usermod -a -G www-data ${fermentrackUser}||die
+    sudo usermod -a -G www-data ${fermentrackUser}||die
   fi
   echo
 }
@@ -362,7 +335,7 @@ cloneRepository() {
   printinfo "Downloading most recent $package_name codebase..."
   cd "$installPath" || exit
   if [ "$github_repo" != "master" ]; then
-    sudo -u ${fermentrackUser} -H git clone -b ${github_branch} ${github_repo} "$installPath/fermentrack"||die
+    sudo -u ${fermentrackUser} -H git clone -b "${github_branch}" ${github_repo} "$installPath/fermentrack"||die
   else
     sudo -u ${fermentrackUser} -H git clone ${github_repo} "$installPath/fermentrack"||die
   fi
@@ -418,6 +391,7 @@ createPythonVenv() {
   printinfo "Manually installing PyZMQ and Circus - This could take ~10-15 mins."
 
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
+  # TODO - version lock the below to match requirements.txt - circus>=0.16.0,<0.17.0
   sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
 
   if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
@@ -538,10 +512,6 @@ find_ip_address() {
 
 
 installationReport() {
-#  MYIP=$(/sbin/ifconfig|egrep -A 1 'eth|wlan'|awk -F"[Bcast:]" '/inet addr/ {print $4}')
-#  MYIP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
-  MYIP=$(hostname -I 2>/dev/null|awk '{print $2}')
-
   find_ip_address
 
   if [[ $PORT != "80" ]]; then
@@ -623,7 +593,6 @@ echo
 
 
 verifyInternetConnection
-verifyInstallerVersion
 getAptPackages
 verifyFreeDiskSpace
 verifyInstallPath
