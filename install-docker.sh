@@ -328,7 +328,7 @@ set_web_services_port() {
   fi
 
   # Update the port mapping in production.yml (ignored if we're using net=host)
-  sed -i  "s+80:80+${PORT}:80" production.yml
+  sed -i  "s+80:80+${PORT}:80+g" production.yml
 }
 
 

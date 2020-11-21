@@ -19,8 +19,8 @@ services:
       - /var/run/dbus:/var/run/dbus
       - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
     env_file:
-      - ./.envs/.production/.django
-      - ./.envs/.production/.postgres
+      - ./envs/django
+      - ./envs/postgres
     command: ["/start", "--privileged"]
     privileged: true
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       - postgres_data:/var/lib/postgresql/data:Z
       - postgres_data_backups:/backups:z
     env_file:
-      - ./.envs/.production/.postgres
+      - ./envs/postgres
     restart: unless-stopped
     network_mode: "host"
 
