@@ -274,7 +274,7 @@ get_files_from_main_repo() {
 #  else
 #    die "Unable to download production.yml from GitHub"
 #  fi
-  cp production.sample.yml production.yml
+  cp sample.production.yml production.yml
 }
 
 setup_django_env() {
