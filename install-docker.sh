@@ -158,7 +158,7 @@ check_for_web_service_port() {
     printinfo "for most websites). If you have another service currently running on port 80"
     printinfo "then this install will likely fail unless another port is selected."
     echo
-    read -p "What user would you like to install ${PACKAGE_NAME} under? [${PORT}]: " PORT_SEL
+    read -p "What port would you like to access ${PACKAGE_NAME} on? [${PORT}]: " PORT_SEL
     if [ -z "${PORT_SEL}" ]; then
       PORT="${PORT}"
     else
@@ -265,18 +265,16 @@ get_files_from_main_repo() {
 #  svn export https://github.com/thorrak/fermentrack/trunk/compose &>> install.log
 #  svn export https://github.com/thorrak/fermentrack/trunk/production.yml &>> install.log
   svn export https://github.com/thorrak/fermentrack/branches/docker/compose &>> install.log
-  svn export https://github.com/thorrak/fermentrack/branches/docker/production.yml &>> install.log
+#  svn export https://github.com/thorrak/fermentrack/branches/docker/production.yml &>> install.log
 
   # Rewrite production.yml
-  if [ -f "./production.yml" ]; then
-    sed -i  "s+./.envs/.production/.django+./envs/django+g" production.yml
-    sed -i  "s+./.envs/.production/.postgres+./envs/postgres+g" production.yml
-    sed -i  "s+./.envs/.production/.postgres+./envs/postgres+g" production.yml
-    sed -i  "s+./compose/production/django/Dockerfile+./Dockerfile+g" production.yml
-  else
-    die "Unable to download production.yml from GitHub"
-  fi
-
+#  if [ -f "./production.yml" ]; then
+#    sed -i  "s+./.envs/.production/.+./envs/+g" production.yml
+#    sed -i  "s+./compose/production/django/Dockerfile+./Dockerfile+g" production.yml
+#  else
+#    die "Unable to download production.yml from GitHub"
+#  fi
+  cp production.sample.yml production.yml
 }
 
 setup_django_env() {
@@ -312,6 +310,17 @@ setup_postgres_env() {
   fi
 }
 
+#setup_mdns_repeater_env() {
+#  # TODO - Do something to detect the external interface here
+#
+#  if [ -f "./envs/mdns-repeater" ]; then
+#    printinfo "KegScreen mdns-repeater environment configuration already exists at ./envs/mdns-repeater"
+#  else
+#    printinfo "Creating KegScreen mdns-repeater environment configuration at ./envs/mdns-repeater"
+#    cp sample_envs/mdns-repeater envs/mdns-repeater
+#  fi
+#}
+
 set_web_services_port() {
   # Rewrite the nginx config file (necessary since we're now using net=host)
   if [ -f "./compose/production/nginx/nginx.conf" ]; then
@@ -320,7 +329,6 @@ set_web_services_port() {
 
   # Update the port mapping in production.yml (ignored if we're using net=host)
   sed -i  "s+80:80+${PORT}:80" production.yml
-
 }
 
 
@@ -381,7 +389,7 @@ installationReport() {
   echo "enter ${URL} into your web browser."
   echo
   echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please "
-  echo "       back up the following two files to ensure that you do not lose data if you"
+  echo "       back up the following files to ensure that you do not lose data if you"
   echo "       need to reinstall ${PACKAGE_NAME}:"
   echo
   echo " - ${PACKAGE_NAME} Variables     : ./envs/django"
@@ -397,9 +405,9 @@ installationReport() {
 exit_if_pi_zero
 verifyInternetConnection
 verifyFreeDiskSpace
+install_docker
 check_for_web_service_port
 check_for_other_services_ports
-install_docker
 get_files_from_main_repo
 setup_django_env
 setup_postgres_env

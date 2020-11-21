@@ -7,8 +7,10 @@ docker-compose -f production.yml down
 # to bridge based on
 docker network prune -f
 docker-compose -f production.yml build
+# Run migrate here to prevent a race condition with celerybeat
+docker-compose -f production.yml run --rm django python manage.py migrate
 docker-compose -f production.yml up -d
 
 # Clean up/delete any unused docker images & networks
-docker image prune -f
+#docker image prune -f
 
