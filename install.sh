@@ -135,14 +135,14 @@ docker_compose_down() {
   # docker_compose_down is a way for us to nuke an existing docker stack -JUST IN CASE-.
   if command -v docker-compose &> /dev/null; then
     # Docker compose exists
-    if [ -f "./production.yml" ]; then
+    if [ -f "./docker-compose.yml" ]; then
       # The docker-compose file also exists. The user is probably re-running the install script when (this is an existing installation)
       printwarn "Existing run of this installer detected."
       printinfo "This script will now attempt to shut down any previous installation of ${PACKAGE_NAME}"
       printinfo "before proceeding. To cancel this, press Ctrl+C in the next 5 seconds."
       sleep 5s
       printinfo "Shutting down previous installation..."
-      docker-compose -f production.yml down &>> install.log
+      docker-compose -f docker-compose.yml down &>> install.log
       printinfo "Previous installation shut down. Continuing with install."
     fi
   fi
@@ -255,26 +255,16 @@ get_files_from_main_repo() {
 
   # Delete the docker compose files if they exist (we want to overwrite these)
   rm -rf ./compose/
-  if [ -f "./production.yml" ]; then
+  if [ -f "./docker-compose.yml" ]; then
     # TODO - Warn the user on this
-    rm production.yml
+    rm docker-compose.yml
   fi
 
   # Download the relevant files from GitHub
   # TODO - Revert this once the files are merged to master (or alternatively dev)
-#  svn export https://github.com/thorrak/fermentrack/trunk/compose &>> install.log
-#  svn export https://github.com/thorrak/fermentrack/trunk/production.yml &>> install.log
   svn export https://github.com/thorrak/fermentrack/branches/docker/compose &>> install.log
-#  svn export https://github.com/thorrak/fermentrack/branches/docker/production.yml &>> install.log
 
-  # Rewrite production.yml
-#  if [ -f "./production.yml" ]; then
-#    sed -i  "s+./.envs/.production/.+./envs/+g" production.yml
-#    sed -i  "s+./compose/production/django/Dockerfile+./Dockerfile+g" production.yml
-#  else
-#    die "Unable to download production.yml from GitHub"
-#  fi
-  cp sample.production.yml production.yml
+  cp sample.docker-compose.yml docker-compose.yml
 }
 
 setup_django_env() {
@@ -327,8 +317,8 @@ set_web_services_port() {
     sed -i "s+:80+:${PORT}+g" ./compose/production/nginx/nginx.conf
   fi
 
-  # Update the port mapping in production.yml (ignored if we're using net=host)
-  sed -i  "s+80:80+${PORT}:80+g" production.yml
+  # Update the port mapping in docker-compose.yml (ignored if we're using net=host)
+  sed -i  "s+80:80+${PORT}:80+g" docker-compose.yml
 }
 
 
