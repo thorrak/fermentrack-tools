@@ -1,85 +1,45 @@
 #!/usr/bin/env bash
 
-# Copyright 2013 BrewPi
-# This file was originally part of BrewPi, and is now part of BrewPi/Fermentrack
+# fermentrack-tools is intended for use in setting up installations of Fermentrack on individual "deployed" Raspberry Pis,
+# as opposed to being the source for building new Fermentrack Docker images. The main differences between the build in
+# fermentrack-tools as opposed to Fermentrack are:
 
-# BrewPi is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# * fermentrack-tools deployments use the Docker Hub hosted container
+# * fermentrack-tools deployments include Sentry links
 
-# BrewPi is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# DOCKER_DIGEST="sha256:d40df7149a74914ffacf720f39bddf437e1a3a4c70fed820c9ced61f784c3741"
 
-# You should have received a copy of the GNU General Public License
-# along with BrewPi.  If not, see <http://www.gnu.org/licenses/>.
-
-# Fermentrack is free software, and is distributed under the terms of the MIT license.
-# A copy of the MIT license should be included with Fermentrack. If not, a copy can be
-# reviewed at <https://opensource.org/licenses/MIT>
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-
-########################
-### This script assumes a clean Raspbian install.
-### Freeder, v1.0, Aug 2013
-### Elco, Oct 2013
-### Using a custom 'die' function shamelessly stolen from http://mywiki.wooledge.org/BashFAQ/101
-### Using ideas even more shamelessly stolen from Elco and mdma. Thanks guys!
-########################
-
-
-# For fermentrack, the process will work like this:
-# 1. Install the system-wide packages (nginx, etc.)
-# 2. Confirm the install settings
-# 3. Add the users
-# 4. Clone the fermentrack repo
-# 5. Set up  virtualenv
-# 6. Run the fermentrack upgrade script
-# 7. Copy the nginx configuration file & restart nginx
-
-
-package_name="Fermentrack"
-PORT="80"
-github_repo="https://github.com/thorrak/fermentrack.git"
-github_branch="master"
 green=$(tput setaf 76)
 red=$(tput setaf 1)
 tan=$(tput setaf 3)
 reset=$(tput sgr0)
 myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
-############## Command Line Options Parser
 
+PACKAGE_NAME="Fermentrack"
 INTERACTIVE=1
+PORT="80"
+
+
 
 # Help text
 function usage() {
-    echo "Usage: $0 [-h] [-n] [-r <repo_url>] [-b <branch>]" 1>&2
+    echo "Usage: $0 [-h] [-n] [-p <port_number>] [-b <branch>]" 1>&2
     echo "Options:"
-    echo "  -h               This help"
-    echo "  -n               Run non interactive installation"
-    echo "  -r <repo_url>    Specify fermentrack repository (only for development)"
-    echo "  -b <branch>      Branch used (only for development or testing)"
+    echo "  -h                This help"
+    echo "  -n                Run non interactive installation"
+    echo "  -p <port_number>  Specify port to access ${PACKAGE_NAME}"
+    echo "  -b <branch>       Branch used (only for development or testing)"
     exit 1
 }
 
-while getopts "nhr:b:" opt; do
+while getopts "nhp:b:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
       ;;
-    r)
-      github_repo=$OPTARG
+    p)
+      PORT=$OPTARG
       ;;
     b)
       github_branch=$OPTARG
@@ -103,95 +63,44 @@ done
 shift $((OPTIND-1))
 
 
-
-
 printinfo() {
   printf "::: ${green}%s${reset}\n" "$@"
+  printf "::: ${green}%s${reset}\n" "$@" >> ./install.log
 }
 
 
 printwarn() {
  printf "${tan}*** WARNING: %s${reset}\n" "$@"
+ printf "${tan}*** WARNING: %s${reset}\n" "$@" >> ./install.log
 }
 
 
 printerror() {
  printf "${red}*** ERROR: %s${reset}\n" "$@"
-}
-
-
-# Functions
-warn() {
-  local fmt="$1"
-  command shift 2>/dev/null
-  echo "${red}*** ----------------------------------${reset}"
-  echo "${red}*** ERROR ERROR ERROR ERROR ERROR ***${reset}"
-  echo -e "${red}$fmt\n" "${@}${reset}"
-  echo "${red}*** ----------------------------------${reset}"
-  echo "${red}*** See above lines for error message${reset}"
-  echo "${red}*** Setup NOT completed${reset}"
-  echo "${red}*** More information in the \"install.log\" file${reset}"
+ printf "${red}*** ERROR: %s${reset}\n" "$@" >> ./install.log
 }
 
 
 die () {
   local st="$?"
-  warn "$@"
+  printerror "$@"
   exit "$st"
 }
 
-welcomeMessage() {
-  echo -n "${tan}"
-  cat << "EOF"
- _____                              _                  _    
-|  ___|__ _ __ _ __ ___   ___ _ __ | |_ _ __ __ _  ___| | __
-| |_ / _ \ '__| '_ ` _ \ / _ \ '_ \| __| '__/ _` |/ __| |/ /
-|  _|  __/ |  | | | | | |  __/ | | | |_| | | (_| | (__|   < 
-|_|  \___|_|  |_| |_| |_|\___|_| |_|\__|_|  \__,_|\___|_|\_\
-
-EOF
-  echo -n "${reset}"
-  echo "Welcome to the installation of Fermentrack. This script will install fermentrack."
-  echo "A new user will be created and Fermentrack will be installed in that users home directory."
-  echo "When the installation is done with no errors Fermentrack is started and monitored automatically."
-  echo ""
-  echo "Please note - Any existing apps that require Apache (including RaspberryPints and BrewPi-www)"
-  echo "will be deactivated. If you want support for these apps it can be optionally installed later."
-  echo "Please read http://apache.fermentrack.com/ for more information."
-  echo ""
-  echo "For more information about Fermentrack please visit: http://fermentrack.com/"
-  echo
-  if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask this if we're running in noninteractive mode
-      read -p "Do you want to continue to install Fermentrack? [y/N] " yn
-      case "$yn" in
-        y | Y | yes | YES| Yes ) printinfo "Ok, let's go!";;
-        * ) exit;;
-      esac
+exit_if_pi_zero() {
+  # Pi Zero string (armv6l)
+  # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
+  if uname -a | grep -q 'armv6l'; then
+    # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
+    # decide to revisit in the future.
+    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running ${PACKAGE_NAME}. Exiting."
   fi
 }
-
-
-verifyRunAsRoot() {
-    # verifyRunAsRoot does two things - First, it checks if the script was run by a root user. Assuming it wasn't,
-    # then it attempts to relaunch itself as root.
-    if [[ ${EUID} -eq 0 ]]; then
-        printinfo "This script was launched as root. Continuing installation."
-    else
-        printinfo "This script was called without root privileges. It installs and updates several packages,"
-        printinfo "creates user accounts, and updates system settings. To continue this script will exit now"
-        printinfo "and must be relaunched by you using sudo. Please check the contents of this script for any"
-        printinfo "concerns with this requirement. Please be sure to access this script from a trusted source."
-        echo
-        die "Script must be relaunched using sudo "
-    fi
-
-}
-
 
 # Check for network connection
 verifyInternetConnection() {
   printinfo "Checking for Internet connection: "
-  wget -q --spider --no-check-certificate github.com &>> install.log
+  wget -q --spider --no-check-certificate github.com &>> ./install.log
   if [ $? -ne 0 ]; then
       echo
       printerror "Could not connect to GitHub. Are you sure you have a working Internet"
@@ -199,298 +108,236 @@ verifyInternetConnection() {
       exit 1
   fi
   printinfo "Internet connection Success!"
-  echo
 }
 
-
-
-
-# getAptPackages runs apt-get update, and installs the basic packages we need to continue the Fermentrack install
-getAptPackages() {
-    printinfo "Installing dependencies using apt-get"
-    lastUpdate=$(stat -c %Y /var/lib/apt/lists)
-    nowTime=$(date +%s)
-    if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
-        printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
-        sudo apt-get update &>> install.log||die
-        printinfo "'apt-get update' ran successfully."
-    fi
-    # Installing the nginx stack along with everything we need for circus, etc.
-    printinfo "apt is updated - installing git-core, nginx, python-dev, and a handful of other packages."
-    printinfo "(This may take a few minutes during which everything will be silent) ..."
-
-    # For the curious:
-    # git-core enables us to get the code from git (har har)
-    # build-essential allows for building certain python (& other) packages
-    # python-dev, python-pip, and python-virtualenv all enable us to run Python scripts
-    # python-zmq is used in part by Circus
-    # nginx is a webserver
-    # redis-server is a key/value store used for gravity sensor & task queue support
-    # avrdude is used to flash Arduino-based devices
-
-    sudo apt-get install -y git-core build-essential nginx redis-server avrdude &>> install.log || die
-
-    # bluez and python-bluez are for bluetooth support (for Tilt)
-    # libcap2-bin is additionally for bluetooth support (for Tilt)
-    # python-scipy and python-numpy are for Tilt configuration support
-
-    sudo apt-get install -y bluez libcap2-bin libbluetooth3 libbluetooth-dev &>> install.log || die
-    # apt-get install -y python-bluez python-scipy python-numpy &>> install.log || die
-
-    sudo apt-get install -y python3-venv python3-dev python3-zmq python3-pip &>> install.log || die
-    # numpy is now installed from source directly into the venv, but I'd like to switch back to using the packages when
-    # possible. We should only -have- to install from source when this (call to apt) doesn't work.
-    sudo apt-get install -y python3-scipy python3-numpy &>> install.log || die
-
-    printinfo "All packages installed successfully."
-    echo
-}
-
-
+# Check disk space
 verifyFreeDiskSpace() {
-  printinfo "Verifying free disk space..."
-  local required_free_kilobytes=512000
+  echo "::: Verifying free disk space..."
+  local required_free_gigabytes=2
+  local required_free_kilobytes=$(( required_free_gigabytes*1024000 ))
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
 
   # - Unknown free disk space , not a integer
   if ! [[ "${existing_free_kilobytes}" =~ ^([0-9])+$ ]]; then
-    printerror "Unknown free disk space!"
-    printerror "We were unable to determine available free disk space on this system."
-    exit 1
+    printwarn ":: Unknown free disk space!"
+    die "We were unable to determine available free disk space on this system."
   # - Insufficient free disk space
   elif [[ ${existing_free_kilobytes} -lt ${required_free_kilobytes} ]]; then
-    printerror "Insufficient Disk Space!"
-    printerror "Your system appears to be low on disk space. ${package_name} recommends a minimum of $required_free_kilobytes KB."
-    printerror "You only have ${existing_free_kilobytes} KB free."
-    printerror "Insufficient free space, exiting..."
-    exit 1
-  fi
-  echo
-}
-
-
-verifyInstallPath() {
-  if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask if we're in non-interactive mode
-      if [ -d "$installPath" ]; then
-        if [ "$(ls -A ${installPath})" ]; then
-          read -p "Install directory is NOT empty, are you SURE you want to use this path? [y/N] " yn
-          case "$yn" in
-              y | Y | yes | YES| Yes ) printinfo "Ok, we warned you!";;
-              * ) exit;;
-          esac
-        fi
-      fi
-      echo
+    printwarn "Insufficient Disk Space!"
+    printinfo "Your system appears to be low on disk space. ${PACKAGE_NAME} recommends a minimum of $required_free_gigabytes GB."
+    printinfo "After freeing up space, run this installation script again. (${install_curl_command})"
+    die "Insufficient free space, exiting..."
   fi
 }
 
 
-createConfigureUser() {
-  ### Create/configure user accounts
-  printinfo "Creating and configuring user accounts."
+docker_compose_down() {
+  # docker_compose_down is a way for us to nuke an existing docker stack -JUST IN CASE-.
+  if command -v docker-compose &> /dev/null; then
+    # Docker compose exists
+    if [ -f "./docker-compose.yml" ]; then
+      # The docker-compose file also exists. The user is probably re-running the install script when (this is an existing installation)
+      printwarn "Existing run of this installer detected."
+      printinfo "This script will now attempt to shut down any previous installation of ${PACKAGE_NAME}"
+      printinfo "before proceeding. To cancel this, press Ctrl+C in the next 5 seconds."
+      sleep 5s
+      printinfo "Shutting down previous installation..."
+      docker-compose -f docker-compose.yml down &>> install.log
+      printinfo "Previous installation shut down. Continuing with install."
+    fi
+  fi
+}
 
-  if id -u ${fermentrackUser} >/dev/null 2>&1; then
-    printinfo "User '${fermentrackUser}' already exists, skipping..."
+
+check_for_web_service_port() {
+  # Allow the user to set the default port for the web service.
+
+  # TODO - Don't show this if the user selected the port as a command line argument
+  if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask questions if we're running in noninteractive mode
+    printinfo "The default port for ${PACKAGE_NAME} to run on is port 80 (which is standard"
+    printinfo "for most websites). If you have another service currently running on port 80"
+    printinfo "then this install will likely fail unless another port is selected."
+    echo
+    read -p "What port would you like to access ${PACKAGE_NAME} on? [${PORT}]: " PORT_SEL
+    if [ -z "${PORT_SEL}" ]; then
+      PORT="${PORT}"
+    else
+      case "${PORT_SEL}" in
+        y | Y | yes | YES| Yes )
+            PORT="${PORT}";; # accept default when y/yes is answered
+        * )
+            PORT="${PORT_SEL}"
+            ;;
+      esac
+    fi
+  fi
+
+  # Make sure the port number we were provided is valid (hijacking nc's stderr for this)
+  local INVALID_COUNT=$(nc -z 127.0.0.1 "${PORT}" 2> >(grep -m 1 -c "invalid"))
+  if [ "$INVALID_COUNT" == "1" ] ; then
+    die "'${PORT}' is not a valid port number"
+  fi
+
+  # Then make sure the port isn't currently occupied
+  if nc -z 127.0.0.1 "${PORT}" ; then
+    printwarn "'${PORT}' is currently in use."
+    printinfo "You probably want to stop the installation here and either select a"
+    printinfo "new port or stop the service currently occupying port ${PORT}."
+    printwarn "Installation will continue with port ${PORT} in 10 seconds unless you press Ctrl+C now."
   else
-    sudo useradd -m -G dialout ${fermentrackUser} -s /bin/bash &>> install.log ||die
-    # Disable direct login for this user to prevent hijacking if password isn't changed
-    sudo passwd -d ${fermentrackUser}||die
+    printinfo "${PORT} is a valid port for installation. Continuing."
   fi
-  # add pi user to fermentrack and www-data group
-  if id -u pi >/dev/null 2>&1; then
-    sudo usermod -a -G www-data ${fermentrackUser}||die
+}
+
+check_for_other_services_ports() {
+  # Since we're (currently) running in net=host mode, all of our services (including postgres & redis) need their
+  # ports to be free.
+
+  # Try to nuke the stack if it exists.
+  docker_compose_down
+
+  # TODO - Properly interpret the service URLs set in the environment files rather than just hardcoding defaults here
+  # Redis default port is 6379
+  if nc -z 127.0.0.1 "6379" ; then
+    die "Port 6379 is required by Redis, but is currently in use. Installation cannot continue."
   fi
-  echo
+
+  # Postgres default port is 5432
+  if nc -z 127.0.0.1 "5432" ; then
+    die "Port 5432 is required by Postgres, but is currently in use. Installation cannot continue."
+  fi
+
+
+}
+
+updateApt() {
+    lastUpdate=$(stat -c %Y /var/lib/apt/lists)
+    nowTime=$(date +%s)
+    if [ $(($nowTime - $lastUpdate)) -gt 604800 ] ; then
+        printinfo "Last 'apt-get update' was awhile back. Updating now. (This may take a minute)"
+        sudo apt-get update &>> install.log||die "Unable to run apt-get update"
+        printinfo "'apt-get update' ran successfully."
+    fi
 }
 
 
-backupOldInstallation() {
-  printinfo "Checking install directories"
-  dirName=$(date +%F-%k:%M:%S)
-  if [ "$(ls -A ${installPath})" ]; then
-    printinfo "Script install directory is NOT empty, backing up to this users home dir and then deleting contents..."
-      if [ ! -d ~/fermentrack-backup ]; then
-        mkdir -p ~/fermentrack-backup
-      fi
-      mkdir -p ~/fermentrack-backup/"$dirName"
-      cp -R "$installPath" ~/fermentrack-backup/"$dirName"/||die
-      rm -rf "$installPath"/*||die
-      find "$installPath"/ -name '.*' | xargs rm -rf||die
-  fi
-  echo
-}
-
-
-fixPermissions() {
-  printinfo "Making sure everything is owned by ${fermentrackUser}"
-  chown -R ${fermentrackUser}:${fermentrackUser} "$installPath"||die
-  # Set sticky bit! nom nom nom
-  find "$installPath" -type d -exec chmod g+rwxs {} \;||die
-  echo
-}
-
-
-# Clone Fermentrack repositories
-cloneRepository() {
-  printinfo "Downloading most recent $package_name codebase..."
-  cd "$installPath" || exit
-  if [ "$github_repo" != "master" ]; then
-    sudo -u ${fermentrackUser} -H git clone -b "${github_branch}" ${github_repo} "$installPath/fermentrack"||die
+install_docker() {
+  # Install Git (and anything else we must have on the base system)
+  sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
+  # Install docker prerequisites
+  sudo apt-get install apt-transport-https ca-certificates software-properties-common -y  &>> install.log||die "Unable to install docker prerequisites"
+  # Install docker
+  if command -v docker &> /dev/null; then
+    # Docker is installed. No need to reinstall.
+    printinfo "Docker is already installed. Continuing."
   else
-    sudo -u ${fermentrackUser} -H git clone ${github_repo} "$installPath/fermentrack"||die
+    curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh  &>> install.log
   fi
-  echo
-}
-
-forcePipReinstallation() {
-  # This forces reinstallation of pip within the virtualenv in case the environment has a "helpful" custom version
-  # (I'm looking at you, ubuntu/raspbian...)
-  printinfo "Forcing reinstallation of pip within the virtualenv"
-  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U --force-reinstall pip
-  sudo -u ${fermentrackUser} -H ${installPath}/venv/bin/pip install -U pip
-}
-
-createPythonVenv() {
-  # Set up virtualenv directory
-  printinfo "Creating virtualenv directory..."
-  cd "$installPath" || exit
-
-  # Our default PYTHON3_INTERPRETER is 'python3'
-  PYTHON3_INTERPRETER="python3"
-
-  # For specific gravity sensor support, we want --system-site-packages
-  # ...but that doesn't work in certain installations of Raspbian. Instead, we'll rig it a bit.
-  # sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv --system-site-packages
-  if command -v python3.7 &> /dev/null; then
-    printinfo "Python 3.7 is installed. Using Python 3.7 to create the venv."
-    # Note for the future - This check is imperfect at best. We're attempting to preserve Stretch support by explicitly
-    # calling for Python 3.7, even though later versions of Raspbian may have later versions of Python. This check will
-    # explicitly force the use/linkage of Python 3.7 binaries when available but *shouldn't* fail with higher versions.
-    sudo -u ${fermentrackUser} -H python3.7 -m venv ${installPath}/venv
-
-    # Fix the symlinks to only point to Python 3.7
-    sudo -u ${fermentrackUser} -H rm ${installPath}/venv/bin/python3
-    sudo -u ${fermentrackUser} -H rm ${installPath}/venv/bin/python
-    sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python
-    sudo -u ${fermentrackUser} -H ln -s ${installPath}/venv/bin/python3.7 ${installPath}/venv/bin/python3
-
-    # Setting PYTHON3_INTERPRETER here allows us to explicitly test if numpy is available in python 3.7
-    PYTHON3_INTERPRETER="python3.7"
+  # Install docker-compose
+  sudo apt-get install docker-compose -y  &>> install.log||die "Unable to install docker-compose"
+  # Add pi to the docker group (for future interaction /w docker)
+  if [ "$USER" == "root" ]; then
+    printinfo "Script is run as root - no need to add to docker group."
+    # sudo usermod -aG docker pi
   else
-    # We presumably either have a user that skipped all the warnings on Stretch, or have later versions of Python
-    # available. Let's just proceed for now. Eventually this check should get rewritten.
-    printinfo "Python 3.7 is NOT installed. Using the generic 'Python 3' to create the venv."
-    sudo -u ${fermentrackUser} -H python3 -m venv ${installPath}/venv
+    printinfo "Adding ${USER} to the 'docker' group"
+    sudo usermod -aG docker "$USER"  &>> install.log
+  fi
+  # Start the docker service
+  sudo systemctl start docker.service  &>> install.log
+}
+
+
+get_files_from_main_repo() {
+  # Although we're replacing the Dockerfile for the Fermentrack container, everything else is the same. Let's just clone
+  # it from GitHub to make life easier.
+  printinfo "Downloading required files from GitHub for setup"
+
+  # Delete the docker compose files if they exist (we want to overwrite these)
+  rm -rf ./compose/
+  if [ -f "./docker-compose.yml" ]; then
+    # TODO - Warn the user on this
+    rm docker-compose.yml
   fi
 
+  # Download the relevant files from GitHub
+  # TODO - Revert this once the files are merged to master (or alternatively dev)
+  svn export https://github.com/thorrak/fermentrack/branches/docker/compose &>> install.log
 
-  # Before we do anything else - update pip
-  forcePipReinstallation
+  cp sample.docker-compose.yml docker-compose.yml
+}
 
-  # I want to specifically install things in this order to the venv
-  printinfo "Manually installing PyZMQ and Circus - This could take ~10-15 mins."
+setup_django_env() {
+  SECRET_KEY=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 50 | head -n 1)
+  ADMIN_URL=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
+#  FLOWER_USER=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
+#  FLOWER_PASS=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 64 | head -n 1)
 
-  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install --no-binary pyzmq pyzmq==19.0.1
-  # TODO - version lock the below to match requirements.txt - circus>=0.16.0,<0.17.0
-  sudo -u ${fermentrackUser} -H  $installPath/venv/bin/python3 -m pip install circus
-
-  if $PYTHON3_INTERPRETER -c "import numpy" &> /dev/null; then
-    # Numpy is available from system packages. Link to the venv
-    printinfo "Numpy and Scipy are available through system packages. Linking to those."
-    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/numpy* ${installPath}/venv/lib/python*/site-packages
-    sudo -u ${fermentrackUser} -H ln -s /usr/lib/python3/dist-packages/scipy* ${installPath}/venv/lib/python*/site-packages
+  if [ -f "./envs/django" ]; then
+    printinfo "${PACKAGE_NAME} environment configuration already exists at ./envs/django"
   else
-    # Numpy is NOT available from system packages. Let's attempt to install manually.
-    printinfo "Numpy and Scipy are not available through system packages. Installing manually."
-    printinfo "NOTE - This could take 4+ hours. This could have been skipped if you installed"
-    printinfo "on a recent version of Raspbian."
-
-    # For manual installs of numpy, we need to have libatlas-base-dev installed
-    sudo apt-get install -y libatlas-base-dev &>> install.log || die
-
-    sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary numpy numpy==1.18.4
-    #sudo -u ${fermentrackUser} -H $installPath/venv/bin/python3 -m pip install --no-binary scipy scipy==1.4.1
+    printinfo "Creating ${PACKAGE_NAME} environment configuration at ./envs/django"
+    mkdir envs
+    cp sample_envs/django envs/django
+    sed -i "s+{secret_key}+${SECRET_KEY}+g" envs/django
+    sed -i "s+{admin_url}+${ADMIN_URL}+g" envs/django
+#    sed -i "s+{flower_user}+${FLOWER_USER}+g" envs/django
+#    sed -i "s+{flower_password}+${FLOWER_PASS}+g" envs/django
   fi
-  printinfo "Venv has been created!"
-
-  echo
 }
 
-setPythonSetcap() {
-  printinfo "Enabling python to query bluetooth without being root"
+setup_postgres_env() {
+  POSTGRES_USER=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
+  POSTGRES_PASS=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 64 | head -n 1)
 
-  PYTHON3_INTERPRETER="$(readlink -e $installPath/venv/bin/python)"
-  if [ -a ${PYTHON3_INTERPRETER} ]; then
-    sudo setcap cap_net_raw,cap_net_admin+eip "$PYTHON3_INTERPRETER"
-  fi
-
-}
-
-
-# Create secretsettings.py file
-makeSecretSettings() {
-  printinfo "Running make_secretsettings.sh from the script repo"
-  if [ -a "$installPath"/fermentrack/utils/make_secretsettings.sh ]; then
-    cd "$installPath"/fermentrack/utils/ || exit
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/make_secretsettings.sh
+  if [ -f "./envs/postgres" ]; then
+    printinfo "${PACKAGE_NAME} Postgres environment configuration already exists at ./envs/postgres"
   else
-    printerror "Could not find fermentrack/utils/make_secretsettings.sh!"
-    # TODO: decide if this is a fatal error or not
-    exit 1
+    printinfo "Creating ${PACKAGE_NAME} Postgres environment configuration at ./envs/postgres"
+    cp sample_envs/postgres envs/postgres
+    sed -i "s+{postgres_user}+${POSTGRES_USER}+g" envs/postgres
+    sed -i "s+{postgres_password}+${POSTGRES_PASS}+g" envs/postgres
   fi
-  echo
+}
+
+#setup_mdns_repeater_env() {
+#  # TODO - Do something to detect the external interface here
+#
+#  if [ -f "./envs/mdns-repeater" ]; then
+#    printinfo "KegScreen mdns-repeater environment configuration already exists at ./envs/mdns-repeater"
+#  else
+#    printinfo "Creating KegScreen mdns-repeater environment configuration at ./envs/mdns-repeater"
+#    cp sample_envs/mdns-repeater envs/mdns-repeater
+#  fi
+#}
+
+set_web_services_port() {
+  # Rewrite the nginx config file (necessary since we're now using net=host)
+  if [ -f "./compose/production/nginx/nginx.conf" ]; then
+    sed -i "s+:80+:${PORT}+g" ./compose/production/nginx/nginx.conf
+  fi
+
+  # Update the port mapping in docker-compose.yml (ignored if we're using net=host)
+  sed -i  "s+80:80+${PORT}:80+g" docker-compose.yml
 }
 
 
-# Run the upgrade script within Fermentrack
-runFermentrackUpgrade() {
-  printinfo "Running upgrade.sh from the script repo to finalize the install."
-  printinfo "This may take up to an hour during which everything will be silent..."
-  if [ -a "$installPath"/fermentrack/utils/upgrade3.sh ]; then
-    cd "$installPath"/fermentrack/utils/ || exit
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/upgrade3.sh &>> install.log
-  else
-    printerror "Could not find ~/fermentrack/utils/upgrade3.sh!"
-    exit 1
-  fi
-  echo
-}
-
-
-# Set up nginx
-setupNginx() {
-  printinfo "Copying nginx configuration to /etc/nginx and activating."
-  rm -f /etc/nginx/sites-available/default-fermentrack &> /dev/null
-  # Replace all instances of 'brewpiuser' with the fermentrackUser we set and save as the nginx configuration
-  sed "s/brewpiuser/${fermentrackUser}/" "$myPath"/nginx-configs/default-fermentrack > /etc/nginx/sites-available/default-fermentrack
-  rm -f /etc/nginx/sites-enabled/default &> /dev/null
-  ln -sf /etc/nginx/sites-available/default-fermentrack /etc/nginx/sites-enabled/default-fermentrack
-  service nginx restart
-}
-
-
-setupCronCircus() {
-  # Install CRON job to launch Circus
-  printinfo "Running updateCronCircus.sh from the script repo"
-  if [ -f "$installPath"/fermentrack/utils/updateCronCircus.sh ]; then
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/updateCronCircus.sh add2cron
-    printinfo "Starting circus process monitor."
-    sudo -u ${fermentrackUser} -H bash "$installPath"/fermentrack/utils/updateCronCircus.sh start
-  else
-    # whoops, something is wrong...
-    printerror "Could not find updateCronCircus.sh!"
-    exit 1
-  fi
-  echo
+rebuild_containers() {
+  printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
+  ./update-docker.sh
 }
 
 
 find_ip_address() {
-  IP_ADDRESSES=($(hostname -I 2>/dev/null))
-  echo "Waiting for Fermentrack install to initialize and become responsive."
-  echo "Fermentrack may take up to 5 minutes to first boot as the database is being initialized."
+  # find_ip_address either finds a non-docker IP address that responds with "Fermentrack" in the text when accessed
+  # via curl, or it dies. We can use this to pick out the proper, externally-routable IP address we can use to
+  # access the application.
 
-  for i in {1..180}; do
+  IP_ADDRESSES=($(hostname -I 2>/dev/null))
+  printinfo "Waiting for ${PACKAGE_NAME} install to initialize and become responsive."
+  printinfo "${PACKAGE_NAME} may take up to 3 minutes to first boot as the database is being initialized."
+
+  for i in {1..90}; do
     for IP_ADDRESS in "${IP_ADDRESSES[@]}"
     do
       if [[ $IP_ADDRESS != "172."* ]]; then
@@ -507,11 +354,12 @@ find_ip_address() {
 
   # If we hit this, we didn't find a valid IP address that responded with "Fermentrack" when accessed.
   echo "missing."
-  die "Unable to find an initialized, responsive instance of Fermentrack"
+  die "Unable to find an initialized, responsive instance of ${PACKAGE_NAME}"
 }
 
 
 installationReport() {
+  # Call find_ip_address to locate the install once it spins up
   find_ip_address
 
   if [[ $PORT != "80" ]]; then
@@ -520,93 +368,39 @@ installationReport() {
     URL="http://${IP_ADDRESS}"
   fi
 
-
-  echo "Done installing Fermentrack!"
-  echo "====================================================================================================="
-  echo "Review the log above for any errors, otherwise, your initial environment install is complete!"
   echo
-  echo "The fermentrack user has been set up with no password. Use 'sudo -u ${fermentrackUser} -i'"
-  echo "from this user to access the fermentrack user"
-  echo "To view Fermentrack, enter ${URL} into your web browser"
   echo
-  echo " - Fermentrack frontend    : ${URL}"
-  echo " - Fermentrack user        : ${fermentrackUser}"
-  echo " - Installation path       : ${installPath}/fermentrack"
-  echo " - Fermentrack version     : $(git -C ${installPath}/fermentrack log --oneline -n1)"
-  echo " - Install script version  : ${scriptversion}"
-  echo " - Install tools path      : ${myPath}"
+  printinfo "Done installing ${PACKAGE_NAME}!"
+  echo "================================================================================="
+  echo "Review the log above for any errors, otherwise, your initial environment install"
+  echo "is complete!"
+  echo
+  echo "${PACKAGE_NAME} has been installed into a Docker container. To view ${PACKAGE_NAME}"
+  echo "enter ${URL} into your web browser."
+  echo
+  echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please "
+  echo "       back up the following files to ensure that you do not lose data if you"
+  echo "       need to reinstall ${PACKAGE_NAME}:"
+  echo
+  echo " - ${PACKAGE_NAME} Variables     : ./envs/django"
+  echo " - Postgres Variables        : ./envs/postgres"
+  echo
+  echo " - ${PACKAGE_NAME} Address       : ${URL}"
   echo ""
   echo "Happy Brewing!"
   echo ""
 }
 
 
-## ------------------- Script "main" starts here -----------------------
-# Create install log file
-verifyRunAsRoot
-welcomeMessage
-
-# This one should remove color escape codes from log, but it needs some more
-# work so the EOL esc codes also get stripped.
-# exec > >( tee >( sed 's/\x1B\[[0-9;]*[JKmsu]//g' >> install.log ) )
-exec > >(tee -ai install.log)
-exec 2>&1
-
-if [[ ${INTERACTIVE} -eq 1 ]]; then  # Don't ask questions if we're running in noninteractive mode
-    printinfo "To accept the default answer, just press Enter."
-    printinfo "The default is capitalized in a Yes/No question: [Y/n]"
-    printinfo "or shown between brackets for other questions: [default]"
-    echo
-
-    date=$(date)
-    read -p "The time is currently set to $date. Is this correct? [Y/n]" choice
-    case "$choice" in
-      n | N | no | NO | No )
-        dpkg-reconfigure tzdata;;
-      * )
-    esac
-
-    printinfo "All scripts associated with Fermentrack are now installed to a user's home directory"
-    printinfo "Hitting 'enter' will accept the default option in [brackets] (recommended)."
-    printwarn "Any data in the user's home directory may be ERASED during install!"
-    echo
-    read -p "What user would you like to install Fermentrack under? [fermentrack]: " fermentrackUser
-    if [ -z "${fermentrackUser}" ]; then
-      fermentrackUser="fermentrack"
-    else
-      case "${fermentrackUser}" in
-        y | Y | yes | YES| Yes )
-            fermentrackUser="fermentrack";; # accept default when y/yes is answered
-        * )
-            ;;
-      esac
-    fi
-else  # If we're in non-interactive mode, default the user
-    fermentrackUser="fermentrack"
-fi
-
-installPath="/home/${fermentrackUser}"
-scriptversion=$(git log --oneline -n1)
-printinfo "Configuring under user ${fermentrackUser}"
-printinfo "Configuring in directory $installPath"
-echo
-
-
+exit_if_pi_zero
 verifyInternetConnection
-getAptPackages
 verifyFreeDiskSpace
-verifyInstallPath
-createConfigureUser
-backupOldInstallation
-fixPermissions
-cloneRepository
-fixPermissions
-createPythonVenv
-setPythonSetcap
-makeSecretSettings
-runFermentrackUpgrade
-setupNginx
-fixPermissions
-setupCronCircus
+install_docker
+check_for_web_service_port
+check_for_other_services_ports
+get_files_from_main_repo
+setup_django_env
+setup_postgres_env
+set_web_services_port
+rebuild_containers
 installationReport
-sleep 1s
