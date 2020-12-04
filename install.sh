@@ -112,7 +112,7 @@ verifyInternetConnection() {
 
 # Check disk space
 verifyFreeDiskSpace() {
-  echo "::: Verifying free disk space..."
+  printinfo "Verifying free disk space..."
   local required_free_gigabytes=2
   local required_free_kilobytes=$(( required_free_gigabytes*1024000 ))
   local existing_free_kilobytes=$(df -Pk | grep -m1 '\/$' | awk '{print $4}')
@@ -128,6 +128,7 @@ verifyFreeDiskSpace() {
     printinfo "After freeing up space, run this installation script again. (${install_curl_command})"
     die "Insufficient free space, exiting..."
   fi
+  printinfo "Sufficient free disk space is available"
 }
 
 
@@ -180,10 +181,11 @@ check_for_web_service_port() {
 
   # Then make sure the port isn't currently occupied
   if nc -z 127.0.0.1 "${PORT}" ; then
-    printwarn "'${PORT}' is currently in use."
+    printwarn "Port ${PORT} is currently in use."
     printinfo "You probably want to stop the installation here and either select a"
     printinfo "new port or stop the service currently occupying port ${PORT}."
     printwarn "Installation will continue with port ${PORT} in 10 seconds unless you press Ctrl+C now."
+    sleep 10s
   else
     printinfo "${PORT} is a valid port for installation. Continuing."
   fi
@@ -223,6 +225,7 @@ updateApt() {
 
 install_docker() {
   # Install Git (and anything else we must have on the base system)
+  printinfo "Checking/installing Docker prerequisites using apt-get"
   sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
   # Install docker prerequisites
   sudo apt-get install apt-transport-https ca-certificates software-properties-common -y  &>> install.log||die "Unable to install docker prerequisites"
@@ -231,6 +234,7 @@ install_docker() {
     # Docker is installed. No need to reinstall.
     printinfo "Docker is already installed. Continuing."
   else
+    printinfo "Docker is not installed. Installing."
     curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh  &>> install.log
   fi
   # Install docker-compose
