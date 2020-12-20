@@ -5,7 +5,8 @@ Various tools to install/configure Fermentrack
 
 **Installation Scripts:**
 * **install-docker.sh** - This script installs both Docker and Fermentrack, along with the other applications Fermentrack requires
-* **update-docker.sh** - This script updates the Fermentrack docker stack to the latest version
+* **docker-update.sh** - This script updates the Fermentrack docker stack to the latest version
+* **docker-create-superuser.sh** - This script creates a new Fermentrack superuser (in case you forget your password)
 * **automated_install/auto-docker-install.sh** - This is a bash script that is intended to be called via `curl -L install.fermentrack.com | bash`
 
 

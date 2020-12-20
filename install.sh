@@ -328,7 +328,7 @@ set_web_services_port() {
 
 rebuild_containers() {
   printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
-  ./update-docker.sh
+  ./docker-update.sh
 }
 
 
