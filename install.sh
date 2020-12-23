@@ -238,11 +238,16 @@ install_docker() {
     curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh  &>> install.log
   fi
   # Install docker-compose
-  sudo apt-get install docker-compose -y  &>> install.log||die "Unable to install docker-compose"
+  if command -v docker-compose &> /dev/null; then
+    # Docker is installed. No need to reinstall.
+    printinfo "Docker-compose is already installed. Continuing."
+  else
+    printinfo "Docker-compose is not installed. Installing."
+    sudo apt-get install docker-compose -y  &>> install.log||die "Unable to install docker-compose"
+  fi
   # Add pi to the docker group (for future interaction /w docker)
   if [ "$USER" == "root" ]; then
     printinfo "Script is run as root - no need to add to docker group."
-    # sudo usermod -aG docker pi
   else
     printinfo "Adding ${USER} to the 'docker' group"
     sudo usermod -aG docker "$USER"  &>> install.log
