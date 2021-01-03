@@ -271,7 +271,7 @@ get_files_from_main_repo() {
 
   # Download the relevant files from GitHub
   # TODO - Revert this once the files are merged to master (or alternatively dev)
-  svn export https://github.com/thorrak/fermentrack/branches/docker/compose &>> install.log
+  svn export https://github.com/thorrak/fermentrack/branches/dev/compose &>> install.log
 
   cp sample.docker-compose.yml docker-compose.yml
 }
