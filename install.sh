@@ -249,8 +249,14 @@ install_docker() {
   if [ "$USER" == "root" ]; then
     printinfo "Script is run as root - no need to add to docker group."
   else
-    printinfo "Adding ${USER} to the 'docker' group"
-    sudo usermod -aG docker "$USER"  &>> install.log
+    if id -nG "$USER" | grep -qw "docker"; then
+      printinfo "${USER} already belongs to the 'docker' group"
+    else
+      printinfo "Adding ${USER} to the 'docker' group."
+      printinfo "If you get disconnected here, log back in and re-run the installer."
+      sudo usermod -aG docker "$USER"  &>> install.log
+      exec su -l $USER
+    fi
   fi
   # Start the docker service
   sudo systemctl start docker.service  &>> install.log
