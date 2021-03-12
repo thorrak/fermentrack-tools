@@ -260,6 +260,15 @@ install_docker() {
   fi
   # Start the docker service
   sudo systemctl start docker.service  &>> install.log
+
+  # At this point, docker should be installed and running, and the current user should have access. Check if the current
+  # user can run docker ps - if he/she can, then we can proceed.
+  if docker ps &> /dev/null; then
+    printinfo "Able to access docker - Proceeding."
+  else
+    printerror "Unable to access docker. Try logging out and back in and re-running the installer. If that doesn't work, try restarting your pi."
+    die "Unable to access Docker"
+  fi
 }
 
 
