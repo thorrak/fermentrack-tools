@@ -255,7 +255,7 @@ install_docker() {
       printinfo "Adding ${USER} to the 'docker' group."
       printinfo "If you get disconnected here, log back in and re-run the installer."
       sudo usermod -aG docker "$USER"  &>> install.log
-      exec su -l $USER
+      exec sudo su -l $USER
     fi
   fi
   # Start the docker service
@@ -276,7 +276,7 @@ get_files_from_main_repo() {
   fi
 
   # Download the relevant files from GitHub
-  # TODO - Revert this once the files are merged to master (or alternatively dev)
+  # TODO - Revert this once the files are merged to master
   svn export https://github.com/thorrak/fermentrack/branches/dev/compose &>> install.log
 
   cp sample.docker-compose.yml docker-compose.yml
