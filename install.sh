@@ -253,11 +253,9 @@ install_docker() {
       printinfo "${USER} already belongs to the 'docker' group"
     else
       printinfo "Adding ${USER} to the 'docker' group."
-      # Seeing if we can use gpasswd to set the group rather than usermod - if we can, then we can eliminate the
-      # "log out/back in" step
+      # Seeing if we can use sg to run the command as the docker group
 #      printinfo "If you get disconnected here, log back in and re-run the installer."
-#      sudo usermod -aG docker "$USER"  &>> install.log
-      sudo gpasswd -a "$USER" docker
+      sudo usermod -aG docker "$USER"  &>> install.log
 #      exec sudo su -l $USER
     fi
   fi
@@ -266,7 +264,7 @@ install_docker() {
 
   # At this point, docker should be installed and running, and the current user should have access. Check if the current
   # user can run docker ps - if he/she can, then we can proceed.
-  if docker ps &> /dev/null; then
+  if sg docker -c "docker ps" &> /dev/null; then
     printinfo "Able to access docker - Proceeding."
   else
     printerror "Unable to access docker. Try logging out and back in and re-running the installer. If that doesn't work, try restarting your pi."
@@ -351,7 +349,8 @@ set_web_services_port() {
 
 rebuild_containers() {
   printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
-  ./docker-update.sh
+  # Running sg docker since if we just added the user to the docker group his/her shell won't reflect the new membership
+  sg docker -c "./docker-update.sh"
 }
 
 
