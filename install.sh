@@ -393,7 +393,7 @@ installationReport() {
   echo
   echo
   printinfo "Done installing ${PACKAGE_NAME}!"
-  echo "================================================================================="
+  echo "================================================================================"
   echo "Review the log above for any errors, otherwise, your initial environment install"
   echo "is complete!"
   echo
