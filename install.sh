@@ -253,9 +253,12 @@ install_docker() {
       printinfo "${USER} already belongs to the 'docker' group"
     else
       printinfo "Adding ${USER} to the 'docker' group."
-      printinfo "If you get disconnected here, log back in and re-run the installer."
-      sudo usermod -aG docker "$USER"  &>> install.log
-      exec sudo su -l $USER
+      # Seeing if we can use gpasswd to set the group rather than usermod - if we can, then we can eliminate the
+      # "log out/back in" step
+#      printinfo "If you get disconnected here, log back in and re-run the installer."
+#      sudo usermod -aG docker "$USER"  &>> install.log
+      sudo gpasswd -a "$USER" docker
+#      exec sudo su -l $USER
     fi
   fi
   # Start the docker service
