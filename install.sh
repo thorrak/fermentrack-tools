@@ -7,7 +7,6 @@
 # * fermentrack-tools deployments use the Docker Hub hosted container
 # * fermentrack-tools deployments include Sentry links
 
-# DOCKER_DIGEST="sha256:d40df7149a74914ffacf720f39bddf437e1a3a4c70fed820c9ced61f784c3741"
 
 green=$(tput setaf 76)
 red=$(tput setaf 1)
@@ -253,10 +252,7 @@ install_docker() {
       printinfo "${USER} already belongs to the 'docker' group"
     else
       printinfo "Adding ${USER} to the 'docker' group."
-      # Seeing if we can use sg to run the command as the docker group
-#      printinfo "If you get disconnected here, log back in and re-run the installer."
       sudo usermod -aG docker "$USER"  &>> install.log
-#      exec sudo su -l $USER
     fi
   fi
   # Start the docker service
@@ -367,7 +363,7 @@ find_ip_address() {
     for IP_ADDRESS in "${IP_ADDRESSES[@]}"
     do
       if [[ $IP_ADDRESS != "172."* ]]; then
-        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c Fermentrack)
+        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c ${PACKAGE_NAME})
         if [ $FT_COUNT == "1" ] ; then
           echo "found!"
           return
@@ -421,6 +417,7 @@ installationReport() {
 exit_if_pi_zero
 verifyInternetConnection
 verifyFreeDiskSpace
+updateApt
 install_docker
 check_for_web_service_port
 check_for_other_services_ports
