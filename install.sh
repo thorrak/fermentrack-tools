@@ -400,7 +400,7 @@ installationReport() {
   echo "${PACKAGE_NAME} has been installed into a Docker container. To view ${PACKAGE_NAME}"
   echo "enter ${URL} into your web browser."
   echo
-  echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please "
+  echo "Note - ${PACKAGE_NAME} relies on the fermentrack-tools directory to run. Please "
   echo "       back up the following files to ensure that you do not lose data if you"
   echo "       need to reinstall ${PACKAGE_NAME}:"
   echo
