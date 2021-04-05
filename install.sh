@@ -252,13 +252,20 @@ install_docker() {
       printinfo "${USER} already belongs to the 'docker' group"
     else
       printinfo "Adding ${USER} to the 'docker' group."
-      printinfo "If you get disconnected here, log back in and re-run the installer."
       sudo usermod -aG docker "$USER"  &>> install.log
-      exec su -l $USER
     fi
   fi
   # Start the docker service
   sudo systemctl start docker.service  &>> install.log
+
+  # At this point, docker should be installed and running, and the current user should have access. Check if the current
+  # user can run docker ps - if he/she can, then we can proceed.
+  if sg docker -c "docker ps" &> /dev/null; then
+    printinfo "Able to access docker - Proceeding."
+  else
+    printerror "Unable to access docker. Try logging out and back in and re-running the installer. If that doesn't work, try restarting your pi."
+    die "Unable to access Docker"
+  fi
 }
 
 
@@ -337,7 +344,8 @@ set_web_services_port() {
 
 rebuild_containers() {
   printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
-  ./docker-update.sh
+  # Running sg docker since if we just added the user to the docker group his/her shell won't reflect the new membership
+  sg docker -c "./docker-update.sh"
 }
 
 
@@ -354,7 +362,7 @@ find_ip_address() {
     for IP_ADDRESS in "${IP_ADDRESSES[@]}"
     do
       if [[ $IP_ADDRESS != "172."* ]]; then
-        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c Fermentrack)
+        FT_COUNT=$(curl -L "http://${IP_ADDRESS}:${PORT}" 2>/dev/null | grep -m 1 -c ${PACKAGE_NAME})
         if [ $FT_COUNT == "1" ] ; then
           echo "found!"
           return
@@ -384,14 +392,14 @@ installationReport() {
   echo
   echo
   printinfo "Done installing ${PACKAGE_NAME}!"
-  echo "================================================================================="
+  echo "================================================================================"
   echo "Review the log above for any errors, otherwise, your initial environment install"
   echo "is complete!"
   echo
   echo "${PACKAGE_NAME} has been installed into a Docker container. To view ${PACKAGE_NAME}"
   echo "enter ${URL} into your web browser."
   echo
-  echo "Note - ${PACKAGE_NAME} relies on the fermentrack_tools directory to run. Please "
+  echo "Note - ${PACKAGE_NAME} relies on the fermentrack-tools directory to run. Please "
   echo "       back up the following files to ensure that you do not lose data if you"
   echo "       need to reinstall ${PACKAGE_NAME}:"
   echo
@@ -408,6 +416,7 @@ installationReport() {
 exit_if_pi_zero
 verifyInternetConnection
 verifyFreeDiskSpace
+updateApt
 install_docker
 check_for_web_service_port
 check_for_other_services_ports
