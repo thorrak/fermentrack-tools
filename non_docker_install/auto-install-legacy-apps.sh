@@ -155,6 +155,7 @@ launchInstall() {
     echo -e "::: "
     echo -e "::: Launching ${package_name} installer."
     cd ${tools_name}
+    cd non_docker_install
     # The -n flag makes install-legacy-support.sh non-interactive
     sudo bash ./install-legacy-support.sh -n
     echo -e "::: Automated installation script has now finished. If installation did not complete successfully please"
