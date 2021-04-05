@@ -7,7 +7,6 @@
 # * fermentrack-tools deployments use the Docker Hub hosted container
 # * fermentrack-tools deployments include Sentry links
 
-# DOCKER_DIGEST="sha256:d40df7149a74914ffacf720f39bddf437e1a3a4c70fed820c9ced61f784c3741"
 
 green=$(tput setaf 76)
 red=$(tput setaf 1)
@@ -276,8 +275,7 @@ get_files_from_main_repo() {
   fi
 
   # Download the relevant files from GitHub
-  # TODO - Revert this once the files are merged to master (or alternatively dev)
-  svn export https://github.com/thorrak/fermentrack/branches/dev/compose &>> install.log
+  svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
 
   cp sample.docker-compose.yml docker-compose.yml
 }

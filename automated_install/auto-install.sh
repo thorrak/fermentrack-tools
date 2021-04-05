@@ -136,18 +136,11 @@ cloneFromGit() {
       echo -e "::: Pulling from Git rather than re-cloning"
       cd ${tools_name} || die "Unable to cd to $tools_name"
       git fetch &> /dev/null
-      # TODO - Strip out the next line when all this is merged into master
-      git checkout docker &> /dev/null
       git pull &> /dev/null
       cd ..
       echo -e ":::: Pull from Git was successful"
     else
       git clone ${tools_repo_url} "${tools_name}" -q &> /dev/null||die "Unable to clone from GitHub"
-      # TODO - remove this when everything is merged into master
-      cd ${tools_name} || die "Unable to cd to $tools_name"
-      git checkout docker &> /dev/null
-      git pull &> /dev/null
-      cd ..
       echo "::: Repo was cloned successfully."
     fi
 
