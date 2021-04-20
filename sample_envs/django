@@ -30,7 +30,7 @@ WEB_CONCURRENCY=4
 
 # Sentry
 # ------------------------------------------------------------------------------
-SENTRY_DSN=http://48dbb30951254646a472d378672c2689@sentry.optictheory.com:9000/4
+SENTRY_DSN=http://1157cb94d5ae42eab8d718f23228093e@sentry.optictheory.com:9000/3
 
 
 # Redis
