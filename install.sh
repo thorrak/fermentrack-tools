@@ -136,11 +136,18 @@ docker_compose_down() {
   if command -v docker-compose &> /dev/null; then
     # Docker compose exists
     if [ -f "./docker-compose.yml" ]; then
-      # The docker-compose file also exists. The user is probably re-running the install script when (this is an existing installation)
-      printwarn "Existing run of this installer detected."
-      printinfo "This script will now attempt to shut down any previous installation of ${PACKAGE_NAME}"
-      printinfo "before proceeding. To cancel this, press Ctrl+C in the next 5 seconds."
-      sleep 5s
+        # The docker-compose file also exists, so we can attempt to shut down the docker-compose stack
+      if [ -f "./envs/django" ]; then
+        # If the environment file exists, then we almost certainly have run the installer before. Give the user a chance
+        # to Ctrl+C out
+        printwarn "Existing run of this installer detected."
+        printinfo "This script will now attempt to shut down any previous installation of ${PACKAGE_NAME}"
+        printinfo "before proceeding. To cancel this, press Ctrl+C in the next 5 seconds."
+        sleep 5s
+      else
+        printinfo "This script will now attempt to shut down any previous installation of ${PACKAGE_NAME}"
+        printinfo "before proceeding."
+      fi
       printinfo "Shutting down previous installation..."
       docker-compose -f docker-compose.yml down &>> install.log
       printinfo "Previous installation shut down. Continuing with install."
@@ -193,9 +200,6 @@ check_for_web_service_port() {
 check_for_other_services_ports() {
   # Since we're (currently) running in net=host mode, all of our services (including postgres & redis) need their
   # ports to be free.
-
-  # Try to nuke the stack if it exists.
-  docker_compose_down
 
   # TODO - Properly interpret the service URLs set in the environment files rather than just hardcoding defaults here
   # Redis default port is 6379
@@ -418,9 +422,10 @@ verifyInternetConnection
 verifyFreeDiskSpace
 updateApt
 install_docker
+get_files_from_main_repo
+docker_compose_down
 check_for_web_service_port
 check_for_other_services_ports
-get_files_from_main_repo
 setup_django_env
 setup_postgres_env
 set_web_services_port
