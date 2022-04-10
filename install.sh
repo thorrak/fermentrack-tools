@@ -18,17 +18,18 @@ myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 PACKAGE_NAME="Fermentrack"
 INTERACTIVE=1
 PORT="80"
+DOCKER_IMAGE_TAG="latest"
 
 
 
 # Help text
 function usage() {
-    echo "Usage: $0 [-h] [-n] [-p <port_number>] [-b <branch>]" 1>&2
+    echo "Usage: $0 [-h] [-n] [-p <port_number>] [-i <image>]" 1>&2
     echo "Options:"
     echo "  -h                This help"
     echo "  -n                Run non interactive installation"
     echo "  -p <port_number>  Specify port to access ${PACKAGE_NAME}"
-    echo "  -b <branch>       Branch used (only for development or testing)"
+    echo "  -i <image>        Docker image tag (defaults to 'latest')"
     exit 1
 }
 
@@ -40,8 +41,8 @@ while getopts "nhp:b:" opt; do
     p)
       PORT=$OPTARG
       ;;
-    b)
-      github_branch=$OPTARG
+    i)
+      DOCKER_IMAGE_TAG=$OPTARG
       ;;
     h)
       usage
@@ -345,6 +346,10 @@ set_web_services_port() {
   sed -i  "s+80:80+${PORT}:80+g" docker-compose.yml
 }
 
+set_docker_image_tag() {
+  # Update the image tag in docker-compose.yml
+  sed -i  "s+fermentrack:latest+fermentrack:${DOCKER_IMAGE_TAG}+g" docker-compose.yml
+}
 
 rebuild_containers() {
   printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
@@ -429,5 +434,6 @@ check_for_other_services_ports
 setup_django_env
 setup_postgres_env
 set_web_services_port
+set_docker_image_tag
 rebuild_containers
 installationReport
