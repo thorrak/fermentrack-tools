@@ -33,7 +33,7 @@ function usage() {
     exit 1
 }
 
-while getopts "nhp:b:" opt; do
+while getopts "nhp:i:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
