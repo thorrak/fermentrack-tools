@@ -361,7 +361,7 @@ set_docker_image_tag() {
 rebuild_containers() {
   printinfo "Downloading, building, and starting ${PACKAGE_NAME} containers"
   # Running sg docker since if we just added the user to the docker group his/her shell won't reflect the new membership
-  sg docker -c "./docker-update.sh"
+  sg docker -c "./docker-update.sh -i ${DOCKER_IMAGE_TAG}"
 }
 
 
