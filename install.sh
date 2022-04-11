@@ -269,6 +269,8 @@ install_docker() {
     printinfo "Able to access docker - Proceeding."
   else
     printerror "Unable to access docker. Try logging out and back in and re-running the installer. If that doesn't work, try restarting your pi."
+    printerror "If that still doesn't work, try running sudo chmod 666 /var/run/docker.sock"
+    printerror "Be aware, though, that will open docker access to all logged in user of this device. Only run that command if you are the only user."
     die "Unable to access Docker"
   fi
 }
@@ -349,6 +351,11 @@ set_web_services_port() {
 set_docker_image_tag() {
   # Update the image tag in docker-compose.yml
   sed -i  "s+fermentrack:latest+fermentrack:${DOCKER_IMAGE_TAG}+g" docker-compose.yml
+  if [ "$DOCKER_IMAGE_TAG" != "latest" ]; then
+    if [ -f "./compose/production/nginx/nginx.conf" ]; then
+      sed -i "s+:8123+:5000+g" ./compose/production/nginx/nginx.conf
+    fi
+  fi
 }
 
 rebuild_containers() {
