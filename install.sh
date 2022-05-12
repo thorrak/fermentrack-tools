@@ -231,6 +231,7 @@ install_docker() {
   # Install Git (and anything else we must have on the base system)
   printinfo "Checking/installing Docker prerequisites using apt-get"
   sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
+  sudo apt-get install ncat -y  &>> install.log||die "Unable to install ncat"
   # Install docker prerequisites
   sudo apt-get install apt-transport-https ca-certificates software-properties-common -y  &>> install.log||die "Unable to install docker prerequisites"
   # Install docker
