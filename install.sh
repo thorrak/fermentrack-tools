@@ -328,6 +328,16 @@ setup_postgres_env() {
   fi
 }
 
+setup_tiltbridge_jr_env() {
+  if [ -f "./envs/tiltbridge-jr" ]; then
+    printinfo "${PACKAGE_NAME} TiltBridge Junior environment configuration already exists at ./envs/tiltbridge-jr"
+  else
+    printinfo "Creating ${PACKAGE_NAME} TiltBridge Junior environment configuration at ./envs/tiltbridge-jr"
+    cp sample_envs/tiltbridge-jr envs/tiltbridge-jr
+    sed -i "s+FERMENTRACK_LEGACY_TARGET_ENABLED=false+FERMENTRACK_LEGACY_TARGET_ENABLED=true+g" envs/tiltbridge-jr
+  fi
+}
+
 #setup_mdns_repeater_env() {
 #  # TODO - Do something to detect the external interface here
 #
@@ -441,6 +451,7 @@ check_for_web_service_port
 check_for_other_services_ports
 setup_django_env
 setup_postgres_env
+setup_tiltbridge_jr_env
 set_web_services_port
 set_docker_image_tag
 rebuild_containers
