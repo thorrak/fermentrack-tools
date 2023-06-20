@@ -446,12 +446,13 @@ verifyFreeDiskSpace
 updateApt
 install_docker
 get_files_from_main_repo
+# Do this ahead of docker_compose_down since we're adding a new image
+setup_tiltbridge_jr_env
 docker_compose_down
 check_for_web_service_port
 check_for_other_services_ports
 setup_django_env
 setup_postgres_env
-setup_tiltbridge_jr_env
 set_web_services_port
 set_docker_image_tag
 rebuild_containers
