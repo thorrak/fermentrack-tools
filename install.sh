@@ -133,6 +133,8 @@ verifyFreeDiskSpace() {
 
 checkFermentrackToolsGit() {
   # Check that this repo (fermentrack-tools) is up to date
+  git fetch
+
   local UPSTREAM=${1:-'@{u}'}
   local LOCAL=$(git rev-parse @)
   local REMOTE=$(git rev-parse "$UPSTREAM")
@@ -145,7 +147,6 @@ checkFermentrackToolsGit() {
   elif [ $LOCAL = $BASE ]; then
     # TODO - Add the option to cancel the update here when in interactive mode
     printinfo "This repo is out of date. Updating..."
-    git fetch
     git pull
     die "This repo (the install script) has been updated. Please re-run the install script to continue."
   elif [ $REMOTE = $BASE ]; then
