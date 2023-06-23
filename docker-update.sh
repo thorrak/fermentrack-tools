@@ -35,6 +35,7 @@ done
 shift $((OPTIND-1))
 
 
+docker-compose pull
 docker image pull "jdbeeler/fermentrack:${DOCKER_IMAGE_TAG}"
 docker-compose down
 

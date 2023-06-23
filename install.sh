@@ -131,6 +131,35 @@ verifyFreeDiskSpace() {
   printinfo "Sufficient free disk space is available"
 }
 
+checkFermentrackToolsGit() {
+  # Check that this repo (fermentrack-tools) is up to date
+  git fetch
+
+  local UPSTREAM=${1:-'@{u}'}
+  local LOCAL=$(git rev-parse @)
+  local REMOTE=$(git rev-parse "$UPSTREAM")
+  local BASE=$(git merge-base @ "$UPSTREAM")
+
+  printinfo "Checking that the ${PACKAGE_NAME} installer (this repo) is up to date..."
+
+  if [ $LOCAL = $REMOTE ]; then
+    printinfo "This repo is up to date. Continuing."
+  elif [ $LOCAL = $BASE ]; then
+    # TODO - Add the option to cancel the update here when in interactive mode
+    printinfo "This repo is out of date. Updating..."
+    git pull
+    die "This repo (the install script) has been updated. Please re-run the install script to continue."
+  elif [ $REMOTE = $BASE ]; then
+    # TODO - Add an option to continue anyways
+    printerror "This repo has diverged from (is ahead of) the upstream. Please either push or abandon the changes and try again."
+    die "Exiting as this repo has diverged from the upstream."
+  else
+    # TODO - Add an option to continue anyways
+    printerror "This repo has diverged from the upstream. Please re-run the install script to continue."
+    die "Exiting as this repo has diverged from the upstream."
+  fi
+}
+
 
 docker_compose_down() {
   # docker_compose_down is a way for us to nuke an existing docker stack -JUST IN CASE-.
@@ -224,13 +253,14 @@ updateApt() {
         sudo apt-get update &>> install.log||die "Unable to run apt-get update"
         printinfo "'apt-get update' ran successfully."
     fi
+    sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
 }
 
 
 install_docker() {
   # Install Git (and anything else we must have on the base system)
   printinfo "Checking/installing Docker prerequisites using apt-get"
-  sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
+#  sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
   sudo apt-get install ncat -y  &>> install.log||die "Unable to install ncat"
   # Install docker prerequisites
   sudo apt-get install apt-transport-https ca-certificates software-properties-common -y  &>> install.log||die "Unable to install docker prerequisites"
@@ -286,6 +316,7 @@ get_files_from_main_repo() {
   rm -rf ./compose/
   if [ -f "./docker-compose.yml" ]; then
     # TODO - Warn the user on this
+    printwarn "docker-compose.yml already exists. Overwriting."
     rm docker-compose.yml
   fi
 
@@ -325,6 +356,16 @@ setup_postgres_env() {
     cp sample_envs/postgres envs/postgres
     sed -i "s+{postgres_user}+${POSTGRES_USER}+g" envs/postgres
     sed -i "s+{postgres_password}+${POSTGRES_PASS}+g" envs/postgres
+  fi
+}
+
+setup_tiltbridge_jr_env() {
+  if [ -f "./envs/tiltbridge-jr" ]; then
+    printinfo "${PACKAGE_NAME} TiltBridge Junior environment configuration already exists at ./envs/tiltbridge-jr"
+  else
+    printinfo "Creating ${PACKAGE_NAME} TiltBridge Junior environment configuration at ./envs/tiltbridge-jr"
+    cp sample_envs/tiltbridge-jr envs/tiltbridge-jr
+    sed -i "s+FERMENTRACK_LEGACY_TARGET_ENABLED=false+FERMENTRACK_LEGACY_TARGET_ENABLED=true+g" envs/tiltbridge-jr
   fi
 }
 
@@ -434,8 +475,11 @@ exit_if_pi_zero
 verifyInternetConnection
 verifyFreeDiskSpace
 updateApt
+checkFermentrackToolsGit
 install_docker
 get_files_from_main_repo
+# Do this ahead of docker_compose_down since we're adding a new image
+setup_tiltbridge_jr_env
 docker_compose_down
 check_for_web_service_port
 check_for_other_services_ports
