@@ -68,5 +68,4 @@ services:
     volumes:
       - /dev:/dev
       - fermentrack_logs:/app/log:z
-    command: ["/start", "--privileged"]
     privileged: true
