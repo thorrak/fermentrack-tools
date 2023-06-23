@@ -62,10 +62,13 @@ services:
   tiltbridge-junior:
     image: jdbeeler/tiltbridge-junior:latest
     restart: unless-stopped
+    depends_on:
+      - nginx
     network_mode: "host"
     env_file:
       - ./envs/tiltbridge-jr
     volumes:
       - /dev:/dev
       - fermentrack_logs:/app/log:z
+    command: ["/start"]
     privileged: true
