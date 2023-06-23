@@ -343,6 +343,7 @@ setup_django_env() {
 #    sed -i "s+{flower_user}+${FLOWER_USER}+g" envs/django
 #    sed -i "s+{flower_password}+${FLOWER_PASS}+g" envs/django
   fi
+  sed -i "s+ENV_DJANGO_VERSION=1+ENV_DJANGO_VERSION=2+g" envs/django
 }
 
 setup_postgres_env() {
