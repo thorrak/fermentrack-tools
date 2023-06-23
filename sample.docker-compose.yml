@@ -67,9 +67,5 @@ services:
       - ./envs/tiltbridge-jr
     volumes:
       - /dev:/dev
-      - type: volume
-        source: fermentrack_logs
-        target: /app/log
-        volume:
-          nocopy: true
+      - fermentrack_logs:/app/log:z
     privileged: true
