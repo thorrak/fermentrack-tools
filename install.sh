@@ -324,6 +324,7 @@ get_files_from_main_repo() {
   svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
 
   cp sample.docker-compose.yml docker-compose.yml
+  mkdir -p envs
 }
 
 setup_django_env() {
@@ -336,7 +337,6 @@ setup_django_env() {
     printinfo "${PACKAGE_NAME} environment configuration already exists at ./envs/django"
   else
     printinfo "Creating ${PACKAGE_NAME} environment configuration at ./envs/django"
-    mkdir envs
     cp sample_envs/django envs/django
     sed -i "s+{secret_key}+${SECRET_KEY}+g" envs/django
     sed -i "s+{admin_url}+${ADMIN_URL}+g" envs/django
