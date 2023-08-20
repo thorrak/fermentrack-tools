@@ -408,7 +408,7 @@ rebuild_containers() {
 }
 
 clean_up_docker() {
-  sg docker -c "docker image prune"
+  sg docker -c "docker image prune -f"
 }
 
 
