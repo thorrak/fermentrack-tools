@@ -407,6 +407,10 @@ rebuild_containers() {
   sg docker -c "./docker-update.sh -i ${DOCKER_IMAGE_TAG}"
 }
 
+clean_up_docker() {
+  sg docker -c "docker image prune"
+}
+
 
 find_ip_address() {
   # find_ip_address either finds a non-docker IP address that responds with "Fermentrack" in the text when accessed
@@ -489,4 +493,5 @@ setup_postgres_env
 set_web_services_port
 set_docker_image_tag
 rebuild_containers
+clean_up_docker
 installationReport
