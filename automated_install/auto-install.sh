@@ -56,7 +56,8 @@ exit_if_pi_zero() {
   # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
   if uname -a | grep -q 'armv6l'; then
     # I tried supporting armv6l pis, but they're too slow (or otherwise don't work)
-    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running Fermentrack. Exiting."
+    warn "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which may not provide a good user experience."
+    warn "The installation script will download, but you will need to manually run it with a flag acknowleding that you're running on unsupported hardware."
   fi
 }
 

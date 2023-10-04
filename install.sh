@@ -17,6 +17,7 @@ myPath="$( cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
 
 PACKAGE_NAME="Fermentrack"
 INTERACTIVE=1
+IGNORE_ZERO=0
 PORT="80"
 DOCKER_IMAGE_TAG="latest"
 
@@ -30,6 +31,7 @@ function usage() {
     echo "  -n                Run non interactive installation"
     echo "  -p <port_number>  Specify port to access ${PACKAGE_NAME}"
     echo "  -i <image>        Docker image tag (defaults to 'latest')"
+    echo "  -z                Ignore Pi Zero check"
     exit 1
 }
 
@@ -37,6 +39,9 @@ while getopts "nhp:i:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
+      ;;
+    z)
+      IGNORE_ZERO=1  # Allow installation on an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi)
       ;;
     p)
       PORT=$OPTARG
@@ -90,10 +95,13 @@ die () {
 exit_if_pi_zero() {
   # Pi Zero string (armv6l)
   # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
-  if uname -a | grep -q 'armv6l'; then
-    # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
-    # decide to revisit in the future.
-    die "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which isn't capable of running ${PACKAGE_NAME}. Exiting."
+  if [[ ${IGNORE_ZERO} -eq 1 ]]; then  # Allow the user to ignore this check if they want
+    if uname -a | grep -q 'armv6l'; then
+      # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
+      # decide to revisit in the future.
+      printerror "This is an armv6l Pi (e.g. Pi Zero, Zero W, or Original RPi) which may not be capable of running ${PACKAGE_NAME}. Exiting."
+      die "If you really want to attempt an install, re-run this script with the '-z' flag."
+    fi
   fi
 }
 
