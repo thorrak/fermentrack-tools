@@ -25,7 +25,7 @@ DOCKER_IMAGE_TAG="latest"
 
 # Help text
 function usage() {
-    echo "Usage: $0 [-h] [-n] [-p <port_number>] [-i <image>]" 1>&2
+    echo "Usage: $0 [-h] [-n] [-z] [-p <port_number>] [-i <image>]" 1>&2
     echo "Options:"
     echo "  -h                This help"
     echo "  -n                Run non interactive installation"
@@ -35,7 +35,7 @@ function usage() {
     exit 1
 }
 
-while getopts "nhp:i:" opt; do
+while getopts "nzhp:i:" opt; do
   case ${opt} in
     n)
       INTERACTIVE=0  # Silent/Non-interactive Mode
@@ -95,7 +95,7 @@ die () {
 exit_if_pi_zero() {
   # Pi Zero string (armv6l)
   # Linux dockerzero 5.4.51+ #1333 Mon Aug 10 16:38:02 BST 2020 armv6l GNU/Linux
-  if [[ ${IGNORE_ZERO} -eq 1 ]]; then  # Allow the user to ignore this check if they want
+  if [[ ${IGNORE_ZERO} -eq 0 ]]; then  # Allow the user to ignore this check if they want
     if uname -a | grep -q 'armv6l'; then
       # I tried supporting armv6l pis, but they're too slow (or otherwise don't work). Leaving this code here in case I
       # decide to revisit in the future.
