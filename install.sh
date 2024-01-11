@@ -333,7 +333,7 @@ get_files_from_main_repo() {
 
   git clone https://github.com/thorrak/fermentrack.git &>> install.log
   cd fermentrack
-  mv -compose ..
+  mv compose ..
   cd ..
   rm -rf fermentrack
 
