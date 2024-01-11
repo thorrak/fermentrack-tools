@@ -329,7 +329,14 @@ get_files_from_main_repo() {
   fi
 
   # Download the relevant files from GitHub
-  svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
+#  svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
+
+  git clone https://github.com/thorrak/fermentrack.git
+  cd fermentrack
+  mv -rf compose ..
+  cd ..
+  rm -rf fermentrack
+
 
   cp sample.docker-compose.yml docker-compose.yml
   mkdir -p envs
