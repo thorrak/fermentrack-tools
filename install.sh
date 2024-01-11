@@ -329,7 +329,14 @@ get_files_from_main_repo() {
   fi
 
   # Download the relevant files from GitHub
-  svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
+#  svn export https://github.com/thorrak/fermentrack/branches/master/compose &>> install.log
+
+  git clone https://github.com/thorrak/fermentrack.git &>> install.log
+  cd fermentrack
+  mv compose ..
+  cd ..
+  rm -rf fermentrack
+
 
   cp sample.docker-compose.yml docker-compose.yml
   mkdir -p envs
@@ -370,9 +377,9 @@ setup_postgres_env() {
 
 setup_tiltbridge_jr_env() {
   if [ -f "./envs/tiltbridge-jr" ]; then
-    printinfo "${PACKAGE_NAME} TiltBridge Junior environment configuration already exists at ./envs/tiltbridge-jr"
+    printinfo "TiltBridge Junior environment configuration already exists at ./envs/tiltbridge-jr"
   else
-    printinfo "Creating ${PACKAGE_NAME} TiltBridge Junior environment configuration at ./envs/tiltbridge-jr"
+    printinfo "Creating TiltBridge Junior environment configuration at ./envs/tiltbridge-jr"
     cp sample_envs/tiltbridge-jr envs/tiltbridge-jr
     sed -i "s+FERMENTRACK_LEGACY_TARGET_ENABLED=false+FERMENTRACK_LEGACY_TARGET_ENABLED=true+g" envs/tiltbridge-jr
   fi
