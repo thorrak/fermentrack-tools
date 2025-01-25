@@ -171,8 +171,8 @@ checkFermentrackToolsGit() {
 
 docker_compose_down() {
   # docker_compose_down is a way for us to nuke an existing docker stack -JUST IN CASE-.
-  if command -v docker-compose &> /dev/null; then
-    # Docker compose exists
+  if command -v docker &> /dev/null; then
+    # Docker exists
     if [ -f "./docker-compose.yml" ]; then
         # The docker-compose file also exists, so we can attempt to shut down the docker-compose stack
       if [ -f "./envs/django" ]; then
@@ -187,7 +187,7 @@ docker_compose_down() {
         printinfo "before proceeding."
       fi
       printinfo "Shutting down previous installation..."
-      docker-compose -f docker-compose.yml down &>> install.log
+      docker compose -f docker-compose.yml down &>> install.log
       printinfo "Previous installation shut down. Continuing with install."
     fi
   fi
@@ -279,14 +279,6 @@ install_docker() {
   else
     printinfo "Docker is not installed. Installing."
     curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh  &>> install.log
-  fi
-  # Install docker-compose
-  if command -v docker-compose &> /dev/null; then
-    # Docker is installed. No need to reinstall.
-    printinfo "Docker-compose is already installed. Continuing."
-  else
-    printinfo "Docker-compose is not installed. Installing."
-    sudo apt-get install docker-compose -y  &>> install.log||die "Unable to install docker-compose"
   fi
   # Add pi to the docker group (for future interaction /w docker)
   if [ "$USER" == "root" ]; then
