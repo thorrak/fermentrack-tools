@@ -335,10 +335,10 @@ get_files_from_main_repo() {
 }
 
 setup_django_env() {
-  SECRET_KEY=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 50 | head -n 1)
-  ADMIN_URL=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
-#  FLOWER_USER=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
-#  FLOWER_PASS=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 64 | head -n 1)
+  SECRET_KEY=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-50)
+  ADMIN_URL=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-32)
+#  FLOWER_USER=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-32)
+#  FLOWER_PASS=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-64)
 
   if [ -f "./envs/django" ]; then
     printinfo "${PACKAGE_NAME} environment configuration already exists at ./envs/django"
@@ -354,8 +354,8 @@ setup_django_env() {
 }
 
 setup_postgres_env() {
-  POSTGRES_USER=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
-  POSTGRES_PASS=$(LC_CTYPE=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 64 | head -n 1)
+  POSTGRES_USER=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-32)
+  POSTGRES_PASS=$(head -c 38 /dev/urandom | base64 | tr -d /=+ | cut -c1-64)
 
   if [ -f "./envs/postgres" ]; then
     printinfo "${PACKAGE_NAME} Postgres environment configuration already exists at ./envs/postgres"
