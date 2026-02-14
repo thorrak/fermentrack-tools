@@ -261,26 +261,70 @@ updateApt() {
         sudo apt-get update &>> install.log||die "Unable to run apt-get update"
         printinfo "'apt-get update' ran successfully."
     fi
-    sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
+    sudo apt-get install git -y  &>> install.log||die "Unable to install git"
+}
+
+
+detect_docker_dist() {
+  # Detect the correct Docker repository for this OS.
+  # Raspberry Pi OS uses "raspbian", Debian uses "debian".
+  . /etc/os-release
+  DOCKER_CODENAME="${VERSION_CODENAME}"
+
+  if [ -z "${DOCKER_CODENAME}" ]; then
+    die "Unable to determine OS version codename from /etc/os-release"
+  fi
+
+  case "${ID}" in
+    raspbian)
+      DOCKER_DIST="raspbian"
+      ;;
+    debian)
+      DOCKER_DIST="debian"
+      ;;
+    *)
+      printwarn "Unrecognized OS '${ID}'. Attempting to use 'debian' Docker repository."
+      DOCKER_DIST="debian"
+      ;;
+  esac
+
+  printinfo "Detected OS: ${ID} (${DOCKER_CODENAME}) - using Docker repository: ${DOCKER_DIST}"
 }
 
 
 install_docker() {
-  # Install Git (and anything else we must have on the base system)
+  # Install prerequisites
   printinfo "Checking/installing Docker prerequisites using apt-get"
-#  sudo apt-get install git subversion -y  &>> install.log||die "Unable to install subversion"
-  sudo apt-get install ncat -y  &>> install.log||die "Unable to install ncat"
-  # Install docker prerequisites
-  sudo apt-get install apt-transport-https ca-certificates software-properties-common -y  &>> install.log||die "Unable to install docker prerequisites"
+  sudo apt-get install ncat ca-certificates curl -y  &>> install.log||die "Unable to install docker prerequisites"
+
   # Install docker
   if command -v docker &> /dev/null; then
     # Docker is installed. No need to reinstall.
     printinfo "Docker is already installed. Continuing."
   else
-    printinfo "Docker is not installed. Installing."
-    curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh  &>> install.log
+    printinfo "Docker is not installed. Installing via official apt repository."
+
+    # Set up Docker's GPG key
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL "https://download.docker.com/linux/${DOCKER_DIST}/gpg" -o /etc/apt/keyrings/docker.asc  &>> install.log \
+      || die "Unable to download Docker GPG key"
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the Docker apt repository (DEB822 format)
+    sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
+Types: deb
+Architectures: $(dpkg --print-architecture)
+URIs: https://download.docker.com/linux/${DOCKER_DIST}
+Suites: ${DOCKER_CODENAME}
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+    sudo apt-get update &>> install.log||die "Unable to update apt after adding Docker repository"
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y &>> install.log||die "Unable to install Docker"
   fi
-  # Add pi to the docker group (for future interaction /w docker)
+
+  # Add current user to the docker group (for future interaction w/ docker)
   if [ "$USER" == "root" ]; then
     printinfo "Script is run as root - no need to add to docker group."
   else
@@ -488,6 +532,7 @@ verifyInternetConnection
 verifyFreeDiskSpace
 updateApt
 checkFermentrackToolsGit
+detect_docker_dist
 install_docker
 get_files_from_main_repo
 # Do this ahead of docker_compose_down since we're adding a new image
